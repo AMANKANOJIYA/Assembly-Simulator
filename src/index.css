@@ -1,0 +1,65 @@
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  font-family: "IBM Plex Sans", "Inter", system-ui, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  min-height: 100vh;
+}
+
+/* Thin scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.03);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.15);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.25);
+}
+
+/* Reduce split-pane divider hit area - large hit areas were intercepting button clicks */
+.split-pane {
+  --split-pane-divider-size: 4px;
+  --split-pane-divider-hit-area: 0px;
+}
+
+/* Remove touch delay for faster click response on mobile/trackpad */
+button, [role="button"], .panel-toggle, input[type="checkbox"], select {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Ensure buttons receive clicks above dividers */
+.controls button,
+.clock-graph-trigger,
+.btn {
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+/* Split pane divider: keep z-index low so adjacent content wins */
+.split-pane-divider {
+  z-index: 0;
+}
