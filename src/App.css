@@ -210,11 +210,11 @@
 }
 
 .btn-primary {
-  background: rgba(59, 130, 246, 0.25);
-  border-color: rgba(59, 130, 246, 0.5);
+  background: var(--app-accent-dim);
+  border-color: color-mix(in srgb, var(--vscode-focusBorder) 50%, transparent);
 }
 .btn-primary:hover:not(:disabled) {
-  background: rgba(59, 130, 246, 0.4);
+  background: color-mix(in srgb, var(--vscode-focusBorder) 28%, transparent);
 }
 
 .btn-run {
@@ -225,8 +225,8 @@
   background: rgba(34, 197, 94, 0.35);
 }
 .btn-active {
-  background: rgba(59, 130, 246, 0.35);
-  border-color: rgba(59, 130, 246, 0.6);
+  background: color-mix(in srgb, var(--vscode-focusBorder) 32%, transparent);
+  border-color: var(--vscode-focusBorder);
 }
 .panel-with-move {
   height: 100%;
@@ -351,7 +351,7 @@
   cursor: pointer;
 }
 
-/* Diagram */
+/* Diagram — surfaces from VS Code tokens (matches expanded modal) */
 .diagram-panel .diagram-container {
   flex: 1;
   padding: 16px;
@@ -359,6 +359,10 @@
   align-items: center;
   justify-content: center;
   min-height: 100px;
+  border-radius: 8px;
+  background: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-widget-border);
+  overflow: hidden;
 }
 
 .diagram-placeholder {
@@ -372,29 +376,29 @@
 }
 
 .diagram-block {
-  fill: rgba(255, 255, 255, 0.06);
-  stroke: rgba(255, 255, 255, 0.12);
+  fill: var(--diagram-block-fill, rgba(255, 255, 255, 0.06));
+  stroke: var(--diagram-block-stroke, rgba(255, 255, 255, 0.12));
   stroke-width: 1;
   transition: fill 0.2s, stroke 0.2s;
 }
 .diagram-block.active {
-  fill: rgba(59, 130, 246, 0.25);
-  stroke: rgba(59, 130, 246, 0.6);
+  fill: var(--diagram-block-active-fill);
+  stroke: var(--diagram-block-active-stroke);
 }
 
 .diagram-label {
-  fill: rgba(255, 255, 255, 0.85);
+  fill: var(--diagram-text-title);
   font-size: 11px;
   font-family: inherit;
 }
 
 .diagram-conn {
-  stroke: rgba(255, 255, 255, 0.15);
+  stroke: var(--diagram-conn, rgba(255, 255, 255, 0.15));
   stroke-width: 1.5;
   transition: stroke 0.2s;
 }
 .diagram-conn.active {
-  stroke: rgba(59, 130, 246, 0.6);
+  stroke: var(--diagram-conn-active);
 }
 .diagram-conn.signal-moving {
   animation: signal-pulse 0.6s ease-in-out;
@@ -429,18 +433,79 @@
   cursor: grabbing;
 }
 .diagram-block-title {
-  fill: rgba(255,255,255,0.95);
+  fill: var(--diagram-text-title, rgba(255, 255, 255, 0.95));
   font-size: 10px;
   font-weight: 600;
 }
 .diagram-block-inner {
-  fill: rgba(255,255,255,0.6);
+  fill: var(--diagram-text-inner, rgba(255, 255, 255, 0.6));
   font-size: 8px;
 }
+
+/* Dotted orthogonal links + per-block colors — shared by panel + expanded modal */
+.diagram-svg .diagram-conn.diagram-conn-expanded {
+  stroke: var(--diagram-conn);
+  stroke-dasharray: 4 7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.diagram-svg:not(.expanded) .diagram-conn.diagram-conn-expanded {
+  stroke-width: 1.5;
+}
+.diagram-svg.expanded .diagram-conn.diagram-conn-expanded {
+  stroke-width: 2;
+}
+.diagram-svg .diagram-conn.diagram-conn-expanded.active {
+  stroke: var(--diagram-conn-active);
+}
+.diagram-svg:not(.expanded) .diagram-conn.diagram-conn-expanded.active {
+  stroke-width: 2;
+}
+.diagram-svg.expanded .diagram-conn.diagram-conn-expanded.active {
+  stroke-width: 2.5;
+}
+.diagram-svg .diagram-block--pc {
+  fill: var(--diagram-node-pc-fill);
+  stroke: var(--diagram-node-pc-stroke);
+}
+.diagram-svg .diagram-block--im {
+  fill: var(--diagram-node-im-fill);
+  stroke: var(--diagram-node-im-stroke);
+}
+.diagram-svg .diagram-block--ir {
+  fill: var(--diagram-node-ir-fill);
+  stroke: var(--diagram-node-ir-stroke);
+}
+.diagram-svg .diagram-block--regfile {
+  fill: var(--diagram-node-regfile-fill);
+  stroke: var(--diagram-node-regfile-stroke);
+}
+.diagram-svg .diagram-block--alu {
+  fill: var(--diagram-node-alu-fill);
+  stroke: var(--diagram-node-alu-stroke);
+}
+.diagram-svg .diagram-block--dm {
+  fill: var(--diagram-node-dm-fill);
+  stroke: var(--diagram-node-dm-stroke);
+}
+.diagram-svg .diagram-block--mux {
+  fill: var(--diagram-node-mux-fill);
+  stroke: var(--diagram-node-mux-stroke);
+}
+.diagram-svg .diagram-block--control {
+  fill: var(--diagram-node-control-fill);
+  stroke: var(--diagram-node-control-stroke);
+}
+.diagram-svg .diagram-block.active {
+  fill: var(--diagram-block-active-fill);
+  stroke: var(--diagram-block-active-stroke);
+  stroke-width: 2;
+}
+
 .arch-expanded-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.75);
+  background: color-mix(in srgb, var(--vscode-editor-background) 10%, rgba(0, 0, 0, 0.78));
   backdrop-filter: blur(8px);
   z-index: 2000;
   display: flex;
@@ -449,11 +514,14 @@
   padding: 24px;
 }
 .arch-expanded-content {
-  background: rgba(20,22,35,0.98);
+  background: var(--vscode-sideBar-background);
   border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid var(--vscode-widget-border);
+  color: var(--vscode-foreground);
+  width: min(96vw, 1180px);
   max-width: 95vw;
-  max-height: 90vh;
+  max-height: 92vh;
+  min-height: 480px;
   overflow: auto;
   padding: 20px;
   display: flex;
@@ -470,6 +538,7 @@
 .arch-expanded-header h3 {
   margin: 0;
   font-size: 1.1rem;
+  color: var(--vscode-foreground);
 }
 .arch-expanded-controls {
   display: flex;
@@ -492,15 +561,16 @@
   font-size: 0.85rem;
   min-width: 48px;
   text-align: center;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--vscode-descriptionForeground);
 }
 .arch-expanded-svg {
-  min-width: 500px;
-  min-height: 320px;
+  min-width: 720px;
+  min-height: 420px;
   flex: 1;
   overflow: hidden;
   border-radius: 8px;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-widget-border);
 }
 .arch-zoom-pan-container {
   touch-action: none;
@@ -508,7 +578,7 @@
 .arch-expanded-svg .diagram-svg {
   width: 100%;
   height: 100%;
-  min-height: 300px;
+  min-height: 400px;
   display: block;
 }
 .arch-expanded-svg .diagram-svg.expanded .diagram-block-title {
@@ -518,10 +588,13 @@
 .arch-expanded-svg .diagram-svg.expanded .diagram-block-inner {
   font-size: 9px;
 }
+.arch-expanded-svg .diagram-svg.expanded .diagram-block-inner-line {
+  font-size: 8.5px;
+}
 .arch-expanded-hint {
   margin-top: 10px;
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--vscode-descriptionForeground);
 }
 
 .trace-badges {
@@ -529,15 +602,16 @@
   flex-wrap: wrap;
   gap: 6px;
   padding: 8px 14px;
-  background: rgba(0, 0, 0, 0.15);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--vscode-editor-background) 88%, var(--vscode-focusBorder) 12%);
+  border-top: 1px solid var(--vscode-widget-border);
 }
 .trace-badge {
   font-size: 0.7rem;
   padding: 2px 8px;
   border-radius: 4px;
-  background: rgba(59, 130, 246, 0.2);
-  color: rgba(200, 230, 255, 0.95);
+  background: var(--app-accent-dim);
+  color: var(--vscode-foreground);
+  border: 1px solid var(--vscode-widget-border);
 }
 
 /* Registers */
@@ -568,7 +642,7 @@
 }
 .reg-row.pc-row {
   grid-column: 1 / -1;
-  background: rgba(59, 130, 246, 0.15);
+  background: var(--app-highlight-pc);
 }
 
 .reg-name {
@@ -576,8 +650,8 @@
   font-family: "JetBrains Mono", monospace;
 }
 .reg-value {
-  font-family: "JetBrains Mono", monospace;
-  color: #7dd3fc;
+  font-family: var(--font-mono);
+  color: var(--vscode-list-highlightForeground);
 }
 
 /* Memory */
@@ -875,7 +949,7 @@
   font-size: 0.75rem;
   font-weight: 500;
   padding: 2px 8px;
-  background: rgba(59, 130, 246, 0.4);
+  background: color-mix(in srgb, var(--vscode-focusBorder) 38%, transparent);
   border-radius: 4px;
   margin-left: auto;
 }
@@ -886,11 +960,11 @@
 }
 .btn-send {
   flex-shrink: 0;
-  background: rgba(59, 130, 246, 0.4);
-  border-color: rgba(59, 130, 246, 0.6);
+  background: color-mix(in srgb, var(--vscode-focusBorder) 40%, transparent);
+  border-color: color-mix(in srgb, var(--vscode-focusBorder) 62%, transparent);
 }
 .btn-send:hover:not(:disabled) {
-  background: rgba(59, 130, 246, 0.6);
+  background: color-mix(in srgb, var(--vscode-focusBorder) 55%, transparent);
 }
 .runtime-console-header {
   display: flex;
@@ -909,8 +983,8 @@
   color: #86efac;
 }
 .runtime-console-input {
-  background: rgba(59, 130, 246, 0.2);
-  color: #93c5fd;
+  background: var(--app-accent-dim);
+  color: var(--vscode-list-highlightForeground);
 }
 .runtime-console-icon {
   color: #dc2626;
@@ -958,7 +1032,7 @@
 }
 .runtime-console-input-field:focus {
   outline: none;
-  border-color: rgba(59, 130, 246, 0.6);
+  border-color: var(--vscode-focusBorder);
 }
 
 /* Toast */
@@ -981,8 +1055,8 @@
 }
 
 .toast-info {
-  background: rgba(59, 130, 246, 0.9);
-  color: white;
+  background: var(--vscode-button-background);
+  color: #ffffff;
 }
 
 @keyframes toast-in {

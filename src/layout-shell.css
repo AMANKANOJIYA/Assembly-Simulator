@@ -1873,6 +1873,12 @@ html[data-ui-density="compact"] .vscode-settings-main {
   border: 1px solid var(--app-border-subtle);
 }
 
+/* CPU diagram: dotted links + per-block color (light — panel + modal) */
+[data-theme="light"] .diagram-panel .diagram-container {
+  background: var(--app-surface-elevated);
+  border: 1px solid var(--app-border-subtle);
+}
+
 [data-theme="light"] .arch-zoom-value {
   color: var(--app-fg-muted);
 }

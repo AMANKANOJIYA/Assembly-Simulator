@@ -1,8 +1,10 @@
-# Screenshots Guide
+# Screenshots guide
 
-This directory should contain screenshots of the Assembly Simulator application for the main README.
+This folder holds optional screenshots referenced from the [main README](../README.md).
 
-## Required Screenshots
+Add PNGs here and link them from `README.md` under **Screenshots** (see that section for an example).
+
+## Suggested screenshot files
 
 ### 1. `main_window.png`
 **Full application window** showing:

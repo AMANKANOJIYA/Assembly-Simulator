@@ -1,425 +1,333 @@
-# Assembly Simulator + Architecture Visualizer
+# Assembly Simulator
 
-<div align="center">
+**A desktop app for learning computer architecture by writing assembly, assembling, and stepping through execution—with registers, memory, pipeline trace, and an interactive CPU diagram.**
 
-**A cross-platform desktop application for learning and teaching computer architecture through interactive assembly simulation**
-
-[![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri-2C2D72?logo=tauri)](https://tauri.app/)
-[![Rust](https://img.shields.io/badge/Rust-1.0+-orange?logo=rust)](https://www.rust-lang.org/)
-[![React](https://img.shields.io/badge/React-18+-61dafb?logo=react)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6?logo=typescript)](https://www.typescriptlang.org/)
-
-</div>
+[![Tauri](https://img.shields.io/badge/Tauri-2-24C8D8?logo=tauri)](https://tauri.app/)
+[![Rust](https://img.shields.io/badge/Rust-stable-orange?logo=rust)](https://www.rust-lang.org/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev/)
 
 ---
 
-## 📖 Overview
+## Table of contents
 
-**Assembly Simulator** is an educational desktop application designed to help students and educators understand computer architecture by simulating assembly language execution. The application provides a visual, step-by-step view of how instructions flow through a CPU pipeline, how registers change, and how memory is accessed.
-
-### Use Cases
-
-- **Education**: Teach computer architecture, assembly programming, and CPU internals
-- **Learning**: Understand instruction execution, pipeline stages, and register/memory operations
-- **Debugging**: Step through assembly code to identify bugs and understand program flow
-- **Research**: Experiment with different architectures (RISC-V, LC-3, MIPS) side-by-side
-
-### Key Features
-
-✅ **Multi-Architecture Support**: RISC-V RV32I, LC-3, and MIPS  
-✅ **Visual Pipeline**: See instructions flow through Fetch, Decode, Execute, Memory, Write-back stages  
-✅ **Interactive Debugging**: Step forward/backward, breakpoints, variable-speed execution  
-✅ **I/O Simulation**: Handle input/output via syscalls/traps (read char/int/string, print)  
-✅ **Memory Visualization**: Hex dump with jump-to-address and configurable size  
-✅ **Register Viewer**: Real-time register values with architecture-specific names  
-✅ **Undo Support**: Step backward through execution (including I/O output)  
-✅ **Error Highlighting**: Monaco editor with inline assembler error markers  
+- [Who is this for?](#who-is-this-for)
+- [Features](#features)
+- [Requirements](#requirements)
+- [Install and run](#install-and-run)
+- [Using the application](#using-the-application)
+- [Keyboard shortcuts](#keyboard-shortcuts)
+- [Supported architectures](#supported-architectures)
+- [Instruction & syscall reference](#instruction--syscall-reference)
+- [Saving and opening projects](#saving-and-opening-projects)
+- [Project layout](#project-layout)
+- [Development](#development)
+- [Contributing, license, security](#contributing-license-security)
+- [Acknowledgments](#acknowledgments)
+- [Screenshots](#screenshots)
 
 ---
 
-## 🖼️ Screenshots
+## Who is this for?
 
-When you add PNG files to the `screenshots/` folder (see `screenshots/README.md`), they will appear below.
-
-### Main Interface
-![Main Interface](screenshots/main_window.png)
-
-*Full application window: code editor, architecture diagram, registers, memory viewer, trace panel.*
-
-### Architecture Diagram
-![Architecture Diagram](screenshots/architecture_diagram.png)
-
-*CPU pipeline with active stage highlighting (PC, Fetch, Decode, ALU, Memory, RegFile).*
-
-### Step-by-Step Execution
-![Step-by-Step Execution](screenshots/step_execution.png)
-
-*Stepping through code with register and memory updates and trace events.*
-
-### Breakpoint Debugging
-![Breakpoint Debugging](screenshots/breakpoints.png)
-
-*Breakpoint markers in the gutter and execution paused at breakpoint.*
-
-### I/O Interaction
-![I/O Interaction](screenshots/io_input.png)
-
-*Runtime Console: Trap/Input section, Program Output, Send to Program.*
-
-### Multi-Architecture Comparison
-![Multi-Architecture](screenshots/multi_arch.png)
-
-*Architecture selector: RV32I, LC-3, MIPS with architecture-specific register names.*
+| Audience | How it helps |
+|----------|----------------|
+| **Students** | See how each instruction updates the PC, registers, and memory. |
+| **Instructors** | Demonstrate pipelines, traps/syscalls, and multiple ISAs in one tool. |
+| **Hobbyists** | Experiment with RISC-V, LC-3, MIPS, 8085, 6502, or 8086-style assembly. |
+| **Developers** | Extend the Rust plugin system with new ISAs or UI features ([CONTRIBUTING.md](CONTRIBUTING.md)). |
 
 ---
 
-## 🚀 Quick Start
+## Features
 
-### Prerequisites
+- **Multiple ISAs** — RISC-V RV32I, LC-3, MIPS, Intel 8085, MOS 6502, Intel 8086 (see [Supported architectures](#supported-architectures)).
+- **Editor** — Monaco-based editor with assembler errors, breakpoints (gutter), and optional themes & fonts ([Settings](#using-the-application)).
+- **Execution** — Assemble, run, pause, single-step forward **and backward** (with I/O undo where applicable).
+- **Visualization** — Architecture diagram (pipeline-style blocks), registers, memory hex view, execution trace, cycle timing graph.
+- **I/O** — Simulated syscalls/traps for print/read (behavior depends on ISA).
+- **Desktop** — Built with [Tauri](https://tauri.app/) for a native window (not a browser tab).
 
-- **Node.js** 18+ and npm
-- **Rust** (install via [rustup](https://rustup.rs/))
-- **macOS** (primary target; Linux/Windows may work but not tested)
+---
 
-### Installation
+## Requirements
+
+| Tool | Notes |
+|------|--------|
+| **Node.js** | v18 or newer (includes `npm`) |
+| **Rust** | Stable toolchain ([rustup.rs](https://rustup.rs/)) |
+| **OS** | **macOS** is the primary tested platform. Linux and Windows often work with Tauri but may need extra setup. |
+
+---
+
+## Install and run
+
+### 1. Get the code
 
 ```bash
-# Clone the repository
-git clone <repository-url>
+git clone https://github.com/<your-org-or-user>/simulator.git
 cd simulator
+```
 
-# Install dependencies
+Replace the URL with this repository’s real clone URL.
+
+### 2. Install JavaScript dependencies
+
+```bash
 npm install
+```
 
-# Run in development mode
+### 3. Run the desktop app (development)
+
+```bash
 npm run tauri:dev
 ```
 
-### Building for Production
+This starts the Vite dev server and opens the Tauri window with hot reload for the frontend.
+
+### 4. Web-only UI (optional)
+
+For a quick UI check without the Rust backend:
+
+```bash
+npm run dev
+```
+
+> Full simulation (assemble, step, run) requires **`npm run tauri:dev`** or a production build.
+
+### 5. Production build
 
 ```bash
 npm run tauri:build
 ```
 
-The built application will be in `src-tauri/target/release/bundle/macos/` (macOS) or equivalent for your platform.
+Installers or bundles appear under `src-tauri/target/release/bundle/` (exact path depends on OS).
 
 ---
 
-## 📚 Supported Architectures
+## Using the application
 
-### RISC-V RV32I (full base)
+1. **Choose an architecture** — Toolbar dropdown (e.g. RV32I, LC-3, MIPS, 8085, 6502, 8086).
+2. **Write assembly** — Main editor tab(s); use **New / Open / Save / Samples** from the **left activity bar**.
+3. **Assemble** — **Assemble** checks syntax and loads the program into the simulator.
+4. **Run or step** — **Run**, **Pause**, **Step forward**, **Step back**, **Reset** as needed.
+5. **Breakpoints** — Click the **gutter** (left of line numbers) to toggle breakpoints; run stops when the PC hits one.
+6. **Panels** — **Registers**, **Memory**, **Trace** share one tabbed area on the left; toggle **Diagram** and **Bottom panel** (console / I/O / clock) from the activity bar.
+7. **Settings** — **Gear** at the bottom of the activity bar: theme, fonts, editor size, UI density, panel visibility, run speed, and more.
+8. **Theme** — Moon/Sun (or similar) in the **top-right** for dark/light mode.
 
-**ALU / Immediate**: `lui`, `auipc`, `addi`, `slti`, `sltiu`, `xori`, `ori`, `andi`, `slli`, `srli`, `srai`, `add`, `sub`, `slt`, `sltu`, `xor`, `or`, `and`, `sll`, `srl`, `sra`
+When a program asks for input (syscall/trap), use the **bottom panel** — enable **Trap / Input** and **Program Output** in **Settings → Panels** if sections are hidden.
 
-**Memory**: `lb`, `lh`, `lw`, `lbu`, `lhu`, `sb`, `sh`, `sw`
+---
 
-**Branch**: `beq`, `bne`, `blt`, `bge`, `bltu`, `bgeu`
+## Keyboard shortcuts
 
-**Jump**: `jal`, `jalr`; pseudo: `j`, `ret`, `mv`, `li`, `nop`
+| Shortcut | Action |
+|----------|--------|
+| **Ctrl/Cmd + S** | Save project (`.asim`) |
+| **Ctrl/Cmd + O** | Open project |
+| **Ctrl/Cmd + N** | New editor tab |
+| **Esc** | Close cycle timing graph (when open) |
 
-**System**: `ecall`, `ebreak` (breakpoint/halt)
+*(More shortcuts may be listed in **Help** inside the app.)*
 
-**System Calls** (via `ecall`, register `a7`):
-- `4` = Print string (a0 = address)
-- `5` = Read integer → a0
-- `8` = Read string → buffer at a0, max length a1
-- `10` = Exit
-- `11` = Print integer (a0)
-- `12` = Print character (a0)
-- `13` = Read character → a0
-- `93` = Exit with code (a0)
+---
 
-**Example**:
+## Supported architectures
+
+| ID | Description |
+|----|-------------|
+| **RV32I** | RISC-V 32-bit integer base — `ecall`, loads/stores, branches, etc. |
+| **LC-3** | 16-bit educational ISA — `.ORIG`, `TRAP`, `HALT`, etc. |
+| **MIPS** | MIPS-style 32-bit subset — `syscall`, loads/stores, branches. |
+| **8085** | Intel 8085 |
+| **6502** | MOS 6502 |
+| **8086** | Intel 8086 (real-mode style subset) |
+
+Exact instruction sets and pseudos are implemented in `src-tauri/src/plugin/` (see filenames such as `rv32i.rs`, `lc3.rs`, `mips.rs`, `i8085.rs`, `i6502.rs`, `i8086.rs`).
+
+---
+
+## Instruction & syscall reference
+
+The following summarizes common syscalls and syntax. **Always refer to in-app behavior and the Rust plugin for authoritative semantics.**
+
+### RISC-V RV32I
+
+**Examples**: `addi`, `lw`, `sw`, `beq`, `jal`, `ecall`, pseudos like `li`, `mv`, `nop`.
+
+**Selected `ecall` services** (`a7` = function ID):
+
+| a7 | Meaning |
+|----|---------|
+| 4 | Print string (`a0` = address) |
+| 5 | Read integer → `a0` |
+| 8 | Read string |
+| 10 | Exit |
+| 11 | Print integer (`a0`) |
+| 12 | Print character (`a0`) |
+| 13 | Read character → `a0` |
+| 93 | Exit with code (`a0`) |
+
+**Example:**
+
 ```asm
 _start:
   addi a0, x0, 42
-  addi a7, x0, 11    # print int
+  addi a7, x0, 11
   ecall
-  addi a7, x0, 10    # exit
+  addi a7, x0, 10
   ecall
 ```
 
 ### LC-3
 
-**Instructions**: `ADD`, `AND`, `NOT`, `BR`, `JMP`, `JSR`, `JSRR`, `LD`, `LDI`, `LDR`, `LEA`, `ST`, `STI`, `STR`, `TRAP`, `HALT`, `NOP`
+**Directives**: `.ORIG`, `.FILL`, `.BLKW`, `.END`  
+**Comments**: `;`
 
-**Directives**: `.ORIG`, `.FILL`, `.BLKW`, `.END`
+**Common TRAPs**: `x20` OUT, `x21` PUTS, `x22` IN, `x23` GETC, `x25` HALT (see plugin for full list).
 
-**TRAP Codes**:
-- `x20` = OUT (print char in R0)
-- `x21` = PUTS (print string at R0)
-- `x22` = IN (read char → R0, with echo)
-- `x23` = GETC (read char → R0, no echo)
-- `x24` = PUTSP (print string, word = two bytes low-first, stop at 0x0000)
-- `x25` = HALT
-
-**Example**:
 ```asm
 .ORIG x3000
 _start:
-  TRAP x22          ; IN: read char → R0
-  TRAP x20          ; OUT: print char in R0
+  TRAP x22
+  TRAP x20
   HALT
 .END
 ```
 
-### MIPS (full base)
+### MIPS
 
-**Instructions**: `add`, `sub`, `and`, `or`, `nor`, `xor`, `sll`, `srl`, `sra`, `sllv`, `srlv`, `srav`, `slt`, `sltu`, `slti`, `sltiu`, `addi`, `xori`, `lb`, `lh`, `lw`, `sb`, `sh`, `sw`, `beq`, `bne`, `j`, `jal`, `jr`, `jalr`, `mult`, `multu`, `div`, `divu`, `mfhi`, `mflo`, `syscall`, `li`, `lui`, `nop`. Special registers **HI** and **LO** (multiply/divide results).
+**Syscalls** via `syscall` with `$v0`:
 
-**System Calls** (via `syscall`, register `$v0`):
-- `1` = Print integer ($a0)
-- `4` = Print string ($a0 = address)
-- `5` = Read integer → $v0
-- `8` = Read string → buffer at $a0, max length $a1
-- `10` = Exit
-- `11` = Print character ($a0)
-- `12` = Read character → $v0
-- `17` = Exit with value ($a0)
+| $v0 | Meaning |
+|-----|---------|
+| 1 | Print integer (`$a0`) |
+| 4 | Print string |
+| 5 | Read integer → `$v0` |
+| 8 | Read string |
+| 10 | Exit |
+| 11 | Print char |
+| 12 | Read char → `$v0` |
 
-**Example**:
-```asm
-_start:
-  addi $a0, $zero, 72
-  addi $v0, $zero, 11    # print char
-  syscall
-  addi $v0, $zero, 10    # exit
-  syscall
-```
+### 8085 / 6502 / 8086
+
+Instruction mnemonics and addressing modes follow classic references; see the corresponding `i8085.rs`, `i6502.rs`, and `i8086.rs` plugins and bundled **Samples** for examples.
 
 ---
 
-## 🎮 Usage Guide
+## Saving and opening projects
 
-### Writing Code
+- **Save** writes an **`.asim`** file (source, architecture, breakpoints, speed, panel options, etc.).
+- **Open** loads a project into a new or existing tab depending on implementation.
 
-1. **Select Architecture**: Use the dropdown in the top toolbar to choose RV32I, LC-3, or MIPS
-2. **Write Assembly**: Type your assembly code in the Monaco editor
-3. **Use Labels**: Define labels with a colon (e.g., `_start:`, `loop:`)
-4. **Comments**: 
-   - RISC-V/MIPS: Use `#` for comments
-   - LC-3: Use `;` for comments
-
-### Running Programs
-
-1. **Assemble**: Click "Assemble" to check for errors (or it happens automatically on Run)
-2. **Run**: Click "Run" to execute at full speed
-3. **Pause**: Click "Pause" to stop execution
-4. **Step Forward**: Execute one instruction at a time
-5. **Step Back**: Undo the last instruction (including I/O output)
-6. **Reset**: Restart the program from the beginning
-
-### Debugging
-
-1. **Breakpoints**: Click in the gutter (left of line numbers) to set/remove breakpoints
-2. **Breakpoint Hit**: Execution pauses automatically when PC reaches a breakpoint
-3. **Inspect State**: View registers, memory, and trace events while paused
-4. **Step Through**: Use Step Forward/Back to examine execution in detail
-
-### I/O Interaction
-
-1. **Input Request**: When a program calls a read syscall/trap, a "Trap/Interrupt Input" panel appears
-2. **Enter Input**: Type your input (char, int, or string) and click "Send to Program"
-3. **Output**: Printed text appears in the "Program Output" section
-4. **Auto-Continue**: After sending input, execution continues automatically
-
-### Memory Management
-
-1. **View Memory**: Scroll through the memory hex dump
-2. **Jump to Address**: Type an address (e.g., `0x3000`) and click "Jump"
-3. **Change Size**: Click the settings icon (⚙) to change memory size (4KB–1MB)
-4. **Memory Chunks**: For large memory (>64KB), view by chunks
+Use the activity bar **Save** / **Open** or the keyboard shortcuts above.
 
 ---
 
-## 🏗️ Architecture
-
-### Project Structure
+## Project layout
 
 ```
 simulator/
-├── src/                          # React frontend (TypeScript)
-│   ├── components/
-│   │   ├── Editor.tsx           # Monaco code editor
-│   │   ├── Controls.tsx         # Run/Pause/Step buttons
-│   │   ├── DiagramPanel.tsx     # Architecture diagram
-│   │   ├── RegistersPanel.tsx   # Register viewer
-│   │   ├── MemoryPanel.tsx      # Memory hex dump
-│   │   ├── TracePanel.tsx       # Execution trace
-│   │   └── RuntimeConsole.tsx   # I/O input/output
-│   ├── store.ts                 # Zustand state management
-│   ├── samples.ts               # Sample programs
-│   └── types.ts                 # TypeScript types
-│
-├── src-tauri/                   # Rust backend
+├── src/                      # React + TypeScript UI
+│   ├── components/           # Panels, editor, controls, …
+│   ├── store.ts              # App state (Zustand)
+│   ├── samples.ts            # Example programs
+│   └── appearance.ts         # Font stacks / appearance IDs
+├── src-tauri/                # Rust + Tauri shell
 │   └── src/
-│       ├── plugin/              # Architecture plugins
-│       │   ├── mod.rs           # ArchitecturePlugin trait
-│       │   ├── adapter.rs       # Architecture config/registry
-│       │   ├── rv32i.rs         # RISC-V implementation
-│       │   ├── lc3.rs           # LC-3 implementation
-│       │   └── mips.rs          # MIPS implementation
-│       ├── simulator.rs         # CPU state, undo stack, breakpoints
-│       ├── memory.rs            # Memory abstraction
-│       ├── commands.rs          # Tauri IPC commands
-│       └── lib.rs               # Tauri app entry
-│
-└── README.md
-```
-
-### Architecture Plugin System
-
-The application uses a plugin-based architecture that makes it easy to add new instruction set architectures:
-
-1. **Implement `ArchitecturePlugin` trait**:
-   - `assemble()`: Parse assembly source → binary
-   - `step()`: Execute one instruction
-   - `reset()`: Initialize CPU state
-   - `ui_schema()`: Define diagram layout
-   - `register_schema()`: Define register names
-
-2. **Register in adapter**: Add config in `plugin/adapter.rs`
-
-3. **Add to simulator**: Register plugin in `simulator.rs::get_plugin()`
-
-4. **Add samples**: Create sample programs in `src/samples.ts`
-
-### Data Flow
-
-```
-User Input (Editor)
-    ↓
-Frontend (React/TypeScript)
-    ↓ [Tauri IPC]
-Backend (Rust)
-    ↓
-Architecture Plugin (RV32I/LC-3/MIPS)
-    ↓
-Simulator (State + Memory)
-    ↓
-Step Result (Registers, Memory, Events)
-    ↓ [Tauri IPC]
-Frontend (Update UI)
+│       ├── plugin/           # ISA plugins (rv32i, lc3, mips, i8085, …)
+│       ├── simulator.rs      # CPU state, stepping, undo
+│       ├── commands.rs       # IPC commands for the UI
+│       └── lib.rs
+├── LICENSE
+├── CONTRIBUTING.md
+├── CODE_OF_CONDUCT.md
+├── SECURITY.md
+├── CHANGELOG.md
+└── README.md                 # This file
 ```
 
 ---
 
-## 📝 Sample Programs
-
-### RISC-V: Hello World
-```asm
-_start:
-  lui  a0, 0x10000      # Load address
-  addi a0, a0, 72       # 'H'
-  addi a7, x0, 12       # print char
-  ecall
-  addi a0, x0, 105      # 'i'
-  ecall
-  addi a7, x0, 10       # exit
-  ecall
-```
-
-### LC-3: Echo Input
-```asm
-.ORIG x3000
-_start:
-  TRAP x22              ; IN: read char → R0
-  TRAP x20              ; OUT: print char in R0
-  ADD  R0, R0, #0
-  BRz  done             ; if 0, exit
-  LD   R0, newline
-  TRAP x20
-  BRnzp _start
-done:
-  HALT
-newline: .FILL x000A
-.END
-```
-
-### MIPS: Add Two Numbers
-```asm
-_start:
-  addi $t0, $zero, 10
-  addi $t1, $zero, 20
-  add  $t2, $t0, $t1
-  addi $v0, $zero, 1     # print int
-  add  $a0, $zero, $t2
-  syscall
-  addi $v0, $zero, 10    # exit
-  syscall
-```
-
----
-
-## 🔧 Development
-
-### Adding a New Architecture
-
-1. **Create plugin file**: `src-tauri/src/plugin/<arch>.rs`
-   ```rust
-   pub struct <Arch>Plugin;
-   impl ArchitecturePlugin for <Arch>Plugin { ... }
-   ```
-
-2. **Register in `mod.rs`**: Add module and export
-
-3. **Add config**: Update `adapter.rs::arch_config()`
-
-4. **Register plugin**: Add to `simulator.rs::get_plugin()`
-
-5. **Add samples**: Create samples in `src/samples.ts`
-
-6. **Update UI**: Add architecture option in file menu
-
-### Building
+## Development
 
 ```bash
-# Development
-npm run tauri:dev
-
-# Production build
-npm run tauri:build
-
-# Check Rust code
-cd src-tauri && cargo check
-
-# Format Rust code
-cd src-tauri && cargo fmt
+npm run tauri:dev    # Full app
+npm run build        # Typecheck + Vite build
+npm run lint         # ESLint
+cd src-tauri && cargo check   # Rust check
 ```
 
----
-
-## 🐛 Known Limitations
-
-- **Step Back I/O**: I/O output is now properly undone ✅ (fixed)
-- **Memory Size**: User-configured memory size is now respected ✅ (fixed)
-- **Breakpoints**: Backend breakpoint support is now implemented ✅ (fixed)
-- **Platform Support**: Primarily tested on macOS; Linux/Windows may have issues
+Adding a new architecture typically means implementing the plugin trait, registering it in the adapter, wiring samples and UI — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
-## 📄 License
+## Contributing, license, security
 
-MIT License - see LICENSE file for details
+| Document | Purpose |
+|----------|---------|
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How to report issues, submit PRs, and code style expectations |
+| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community standards |
+| [SECURITY.md](SECURITY.md) | How to report security issues privately |
+| [LICENSE](LICENSE) | **MIT License** — free use with attribution |
+| [CHANGELOG.md](CHANGELOG.md) | Release notes |
+
+By contributing, you agree that your contributions are licensed under the **MIT License**.
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
-- Built with [Tauri](https://tauri.app/) for cross-platform desktop apps
-- Uses [Monaco Editor](https://microsoft.github.io/monaco-editor/) for code editing
-- Architecture diagrams inspired by Patterson & Hennessy's "Computer Organization and Design"
+- [Tauri](https://tauri.app/) — desktop shell  
+- [Monaco Editor](https://microsoft.github.io/monaco-editor/) — code editing  
+- Inspired by classic computer architecture education (e.g. Patterson & Hennessy)
 
 ---
 
-## 📧 Contributing
+## Screenshots
 
-Contributions welcome! Please open an issue or submit a pull request.
+PNG files are in [`screenshots/`](screenshots/README.md). **Use normal Markdown image lines** (`![alt](screenshots/file.png)`), not fenced ` ```markdown ` blocks — code blocks show the text literally and **will not render images**.
+
+### Main window
+
+![Main window — editor, diagram, registers, memory, trace](screenshots/main_window.png)
+
+### Architecture diagram
+
+![CPU architecture diagram](screenshots/architecture_diagram.png)
+
+### Editor & debugging
+
+![Editor with breakpoints and highlights](screenshots/editor_debug.png)
+
+### Registers & memory
+
+![Registers and memory panels](screenshots/registers_memory.png)
+
+### Memory
+
+![Memory hex view](screenshots/memory.png)
+
+### Trace
+
+![Execution trace](screenshots/trace.png)
+
+### Runtime I/O
+
+![Runtime console and I/O](screenshots/runtime_io.png)
+
+### Settings / appearance
+
+![Settings and appearance](screenshots/settings_appearance.png)
+
+### Multi-architecture
+
+![Architecture selector](screenshots/multi_arch.png)
 
 ---
 
 <div align="center">
 
-**Made with ❤️ for computer architecture education**
+**Made for learning computer architecture**
 
 </div>

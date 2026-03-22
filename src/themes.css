@@ -1,83 +1,8 @@
 /**
- * Design tokens — sharp, tool-like (not rounded “card” UI).
- * Dark / light via [data-theme] on document root.
- * --font-ui / --font-mono overridden at runtime by AppearanceSync.
+ * Theme entry: VS Code–aligned tokens (see vscode-theme.css).
+ * Runtime: --font-ui / --font-mono / --editor-font-size from AppearanceSync.
  */
-:root {
-  --editor-font-size: 13px;
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
-  --duration-fast: 0.15s;
-  --duration-med: 0.22s;
-}
-
-[data-theme="dark"] {
-  --app-bg: #1c1f26;
-  --app-surface: #23272f;
-  --app-surface-elevated: #2b3039;
-  --app-border: #3a404c;
-  --app-border-subtle: #323842;
-  --app-fg: #e6e8ec;
-  --app-fg-muted: #9aa3b2;
-  --app-fg-dim: #6b7280;
-  --app-accent: #3b82f6;
-  --app-accent-dim: rgba(59, 130, 246, 0.18);
-  --app-selection: #1e3a5f;
-  --app-highlight-pc: rgba(59, 130, 246, 0.28);
-  --app-highlight-io: rgba(245, 158, 11, 0.22);
-  --app-highlight-error: rgba(248, 113, 113, 0.18);
-  --app-input-bg: #2a2f38;
-  --app-scrollbar: #4b5563;
-  --radius-tool: 6px;
-  --radius-soft: 10px;
-  --shadow-soft: 0 4px 24px rgba(0, 0, 0, 0.22);
-  --font-ui: "IBM Plex Sans", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "Consolas", monospace;
-  /* Cycle timing graph */
-  --cycle-wave-stroke: #60a5fa;
-  --cycle-wave-selected: #fbbf24;
-  --cycle-graph-overlay: rgba(10, 12, 18, 0.58);
-}
-
-/*
- * Light: higher contrast — darker canvas + white panels so borders & text read clearly.
- * (Architecture diagram SVG used dark-theme fills; see layout-shell [data-theme="light"] .diagram-*)
- */
-[data-theme="light"] {
-  --app-bg: #aeb6c4;
-  --app-surface: #ffffff;
-  --app-surface-elevated: #eef1f6;
-  --app-border: #5c6b7f;
-  --app-border-subtle: #8b96a8;
-  --app-fg: #0f172a;
-  --app-fg-muted: #334155;
-  --app-fg-dim: #475569;
-  --app-accent: #1d4ed8;
-  --app-accent-dim: rgba(29, 78, 216, 0.18);
-  --app-selection: #bfdbfe;
-  --app-highlight-pc: rgba(29, 78, 216, 0.2);
-  --app-highlight-io: rgba(217, 119, 6, 0.22);
-  --app-highlight-error: rgba(220, 38, 38, 0.16);
-  --app-input-bg: #f1f5f9;
-  --app-scrollbar: #7c8a9e;
-  --radius-tool: 6px;
-  --radius-soft: 10px;
-  --shadow-soft: 0 2px 10px rgba(15, 23, 42, 0.14);
-  --font-ui: "IBM Plex Sans", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "Consolas", monospace;
-  --cycle-wave-stroke: #1d4ed8;
-  --cycle-wave-selected: #b45309;
-  --cycle-graph-overlay: rgba(15, 23, 42, 0.45);
-  /* Diagram (tokenized for SVG) */
-  --diagram-block-fill: #f8fafc;
-  --diagram-block-stroke: #475569;
-  --diagram-block-active-fill: rgba(29, 78, 216, 0.18);
-  --diagram-block-active-stroke: #1d4ed8;
-  --diagram-conn: #64748b;
-  --diagram-conn-active: #1d4ed8;
-  --diagram-text-title: #0f172a;
-  --diagram-text-inner: #334155;
-}
+@import "./vscode-theme.css";
 
 html[data-theme="light"] ::-webkit-scrollbar-track {
   background: var(--app-border-subtle);

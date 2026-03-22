@@ -1,0 +1,172 @@
+/**
+ * Single VS Code–aligned theme (Dark+ / Light+ inspired).
+ * - Core tokens: --vscode-*
+ * - App aliases: --app-* (existing components)
+ * - Diagram: --diagram-* and --diagram-node-* (CPU schematic; follows theme, no fixed “neon blue”)
+ * @see https://code.visualstudio.com/api/references/theme-color
+ */
+
+:root {
+  --editor-font-size: 13px;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 0.15s;
+  --duration-med: 0.22s;
+  --radius-tool: 6px;
+  --radius-soft: 10px;
+  --shadow-soft: 0 4px 24px rgba(0, 0, 0, 0.22);
+  --font-ui: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Consolas", ui-monospace, monospace;
+}
+
+/* —— Dark+ (default workbench) —— */
+[data-theme="dark"] {
+  /* VS Code workbench */
+  --vscode-editor-background: #1e1e1e;
+  --vscode-sideBar-background: #252526;
+  --vscode-activityBar-background: #333333;
+  --vscode-panel-background: #181818;
+  --vscode-foreground: #cccccc;
+  --vscode-descriptionForeground: #9d9d9d;
+  --vscode-focusBorder: #007fd4;
+  --vscode-widget-border: #3c3c3c;
+  --vscode-input-background: #3c3c3c;
+  --vscode-button-background: #0e639c;
+  --vscode-scrollbarSlider-background: rgba(121, 121, 121, 0.4);
+  --vscode-list-activeSelectionBackground: #04395e;
+  --vscode-list-highlightForeground: #0097fb;
+
+  /* charts.* — used for diagram node tints */
+  --vscode-charts-blue: #3794ff;
+  --vscode-charts-green: #89d185;
+  --vscode-charts-yellow: #cca700;
+  --vscode-charts-orange: #d18616;
+  --vscode-charts-red: #f14c4c;
+  --vscode-charts-purple: #b180d7;
+  --vscode-charts-gray: #858585;
+
+  /* App aliases (same semantics as before) */
+  --app-bg: var(--vscode-editor-background);
+  --app-surface: var(--vscode-sideBar-background);
+  --app-surface-elevated: #2d2d30;
+  --app-border: var(--vscode-widget-border);
+  --app-border-subtle: color-mix(in srgb, var(--vscode-widget-border) 88%, var(--vscode-editor-background) 12%);
+  --app-fg: var(--vscode-foreground);
+  --app-fg-muted: var(--vscode-descriptionForeground);
+  --app-fg-dim: color-mix(in srgb, var(--vscode-descriptionForeground) 75%, var(--vscode-editor-background) 25%);
+  --app-accent: var(--vscode-focusBorder);
+  --app-accent-dim: color-mix(in srgb, var(--vscode-focusBorder) 22%, transparent);
+  --app-selection: var(--vscode-list-activeSelectionBackground);
+  --app-highlight-pc: color-mix(in srgb, var(--vscode-list-activeSelectionBackground) 72%, transparent);
+  --app-highlight-io: rgba(245, 158, 11, 0.22);
+  --app-highlight-error: rgba(248, 113, 113, 0.18);
+  --app-input-bg: var(--vscode-input-background);
+  --app-scrollbar: #4b5563;
+
+  /* Cycle timing graph */
+  --cycle-wave-stroke: var(--vscode-focusBorder);
+  --cycle-wave-selected: var(--vscode-charts-orange);
+  --cycle-graph-overlay: color-mix(in srgb, var(--vscode-editor-background) 58%, #000000 42%);
+
+  /* Diagram — wires & labels (theme-native, not Tailwind blue) */
+  --diagram-block-fill: color-mix(in srgb, var(--vscode-sideBar-background) 94%, var(--vscode-focusBorder) 6%);
+  --diagram-block-stroke: color-mix(in srgb, var(--vscode-widget-border) 82%, var(--vscode-descriptionForeground) 18%);
+  --diagram-block-active-fill: color-mix(in srgb, var(--vscode-list-activeSelectionBackground) 88%, transparent);
+  --diagram-block-active-stroke: var(--vscode-focusBorder);
+  --diagram-conn: color-mix(in srgb, var(--vscode-descriptionForeground) 48%, transparent);
+  --diagram-conn-active: var(--vscode-focusBorder);
+  --diagram-text-title: var(--vscode-foreground);
+  --diagram-text-inner: var(--vscode-descriptionForeground);
+
+  /* Per-node CPU blocks — tinted from charts.* + sideBar */
+  --diagram-node-pc-fill: color-mix(in srgb, var(--vscode-sideBar-background) 80%, var(--vscode-charts-blue) 20%);
+  --diagram-node-pc-stroke: color-mix(in srgb, var(--vscode-widget-border) 45%, var(--vscode-charts-blue) 55%);
+  --diagram-node-im-fill: color-mix(in srgb, var(--vscode-sideBar-background) 80%, var(--vscode-charts-purple) 20%);
+  --diagram-node-im-stroke: color-mix(in srgb, var(--vscode-widget-border) 45%, var(--vscode-charts-purple) 55%);
+  --diagram-node-ir-fill: color-mix(in srgb, var(--vscode-sideBar-background) 80%, var(--vscode-charts-yellow) 20%);
+  --diagram-node-ir-stroke: color-mix(in srgb, var(--vscode-widget-border) 45%, var(--vscode-charts-yellow) 55%);
+  --diagram-node-regfile-fill: color-mix(in srgb, var(--vscode-sideBar-background) 80%, var(--vscode-charts-green) 20%);
+  --diagram-node-regfile-stroke: color-mix(in srgb, var(--vscode-widget-border) 45%, var(--vscode-charts-green) 55%);
+  --diagram-node-alu-fill: color-mix(in srgb, var(--vscode-sideBar-background) 78%, var(--vscode-charts-blue) 22%);
+  --diagram-node-alu-stroke: color-mix(in srgb, var(--vscode-widget-border) 40%, var(--vscode-list-highlightForeground) 60%);
+  --diagram-node-dm-fill: color-mix(in srgb, var(--vscode-sideBar-background) 82%, var(--vscode-charts-red) 18%);
+  --diagram-node-dm-stroke: color-mix(in srgb, var(--vscode-widget-border) 45%, var(--vscode-charts-red) 55%);
+  --diagram-node-mux-fill: color-mix(in srgb, var(--vscode-sideBar-background) 82%, var(--vscode-charts-purple) 18%);
+  --diagram-node-mux-stroke: color-mix(in srgb, var(--vscode-widget-border) 50%, var(--vscode-charts-gray) 50%);
+  --diagram-node-control-fill: color-mix(in srgb, var(--vscode-sideBar-background) 84%, var(--vscode-charts-orange) 16%);
+  --diagram-node-control-stroke: color-mix(in srgb, var(--vscode-widget-border) 45%, var(--vscode-charts-orange) 55%);
+}
+
+/* —— Light+ —— */
+[data-theme="light"] {
+  --vscode-editor-background: #ffffff;
+  --vscode-sideBar-background: #f3f3f3;
+  --vscode-activityBar-background: #2c2c2c;
+  --vscode-panel-background: #f8f8f8;
+  --vscode-foreground: #3b3b3b;
+  --vscode-descriptionForeground: #717171;
+  --vscode-focusBorder: #0090f1;
+  --vscode-widget-border: #cecece;
+  --vscode-input-background: #ffffff;
+  --vscode-button-background: #007acc;
+  --vscode-scrollbarSlider-background: rgba(100, 100, 100, 0.35);
+  --vscode-list-activeSelectionBackground: #e8e8e8;
+  --vscode-list-highlightForeground: #0066bf;
+
+  --vscode-charts-blue: #1a85ff;
+  --vscode-charts-green: #388a34;
+  --vscode-charts-yellow: #c19c00;
+  --vscode-charts-orange: #d16947;
+  --vscode-charts-red: #e51400;
+  --vscode-charts-purple: #881798;
+  --vscode-charts-gray: #616161;
+
+  --app-bg: #aeb6c4;
+  --app-surface: var(--vscode-editor-background);
+  --app-surface-elevated: var(--vscode-sideBar-background);
+  --app-border: #5c6b7f;
+  --app-border-subtle: #8b96a8;
+  --app-fg: #0f172a;
+  --app-fg-muted: #334155;
+  --app-fg-dim: #475569;
+  --app-accent: var(--vscode-focusBorder);
+  --app-accent-dim: color-mix(in srgb, var(--vscode-focusBorder) 16%, transparent);
+  --app-selection: #bfdbfe;
+  --app-highlight-pc: rgba(29, 78, 216, 0.2);
+  --app-highlight-io: rgba(217, 119, 6, 0.22);
+  --app-highlight-error: rgba(220, 38, 38, 0.16);
+  --app-input-bg: #f1f5f9;
+  --app-scrollbar: #7c8a9e;
+
+  --cycle-wave-stroke: var(--vscode-focusBorder);
+  --cycle-wave-selected: #b45309;
+  --cycle-graph-overlay: rgba(15, 23, 42, 0.45);
+
+  --diagram-block-fill: #f8fafc;
+  --diagram-block-stroke: #64748b;
+  --diagram-block-active-fill: color-mix(in srgb, var(--vscode-focusBorder) 14%, var(--vscode-editor-background) 86%);
+  --diagram-block-active-stroke: var(--vscode-focusBorder);
+  --diagram-conn: #64748b;
+  --diagram-conn-active: var(--vscode-focusBorder);
+  --diagram-text-title: #0f172a;
+  --diagram-text-inner: #334155;
+
+  --diagram-node-pc-fill: color-mix(in srgb, var(--diagram-block-fill) 78%, var(--vscode-charts-blue) 22%);
+  --diagram-node-pc-stroke: color-mix(in srgb, var(--diagram-block-stroke) 35%, var(--vscode-charts-blue) 65%);
+  --diagram-node-im-fill: color-mix(in srgb, var(--diagram-block-fill) 78%, var(--vscode-charts-purple) 22%);
+  --diagram-node-im-stroke: color-mix(in srgb, var(--diagram-block-stroke) 35%, var(--vscode-charts-purple) 65%);
+  --diagram-node-ir-fill: color-mix(in srgb, var(--diagram-block-fill) 78%, var(--vscode-charts-yellow) 22%);
+  --diagram-node-ir-stroke: color-mix(in srgb, var(--diagram-block-stroke) 35%, var(--vscode-charts-yellow) 65%);
+  --diagram-node-regfile-fill: color-mix(in srgb, var(--diagram-block-fill) 78%, var(--vscode-charts-green) 22%);
+  --diagram-node-regfile-stroke: color-mix(in srgb, var(--diagram-block-stroke) 35%, var(--vscode-charts-green) 65%);
+  --diagram-node-alu-fill: color-mix(in srgb, var(--diagram-block-fill) 75%, var(--vscode-charts-blue) 25%);
+  --diagram-node-alu-stroke: color-mix(in srgb, var(--diagram-block-stroke) 30%, var(--vscode-list-highlightForeground) 70%);
+  --diagram-node-dm-fill: color-mix(in srgb, var(--diagram-block-fill) 82%, var(--vscode-charts-red) 18%);
+  --diagram-node-dm-stroke: color-mix(in srgb, var(--diagram-block-stroke) 35%, var(--vscode-charts-red) 65%);
+  --diagram-node-mux-fill: color-mix(in srgb, var(--diagram-block-fill) 80%, var(--vscode-charts-purple) 20%);
+  --diagram-node-mux-stroke: color-mix(in srgb, var(--diagram-block-stroke) 40%, var(--vscode-charts-gray) 60%);
+  --diagram-node-control-fill: color-mix(in srgb, var(--diagram-block-fill) 85%, var(--vscode-charts-orange) 15%);
+  --diagram-node-control-stroke: color-mix(in srgb, var(--diagram-block-stroke) 35%, var(--vscode-charts-orange) 65%);
+
+  --shadow-soft: 0 2px 10px rgba(15, 23, 42, 0.14);
+}

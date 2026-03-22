@@ -1,10 +1,11 @@
-import { useRef, useCallback, useState, useEffect } from "react";
+import { useRef, useCallback, useState, useEffect, useMemo } from "react";
 import { useStore } from "../store";
 import type { TraceEvent } from "../types";
 import type { UiBlock } from "../types";
+import { COMPACT_VB, EXPANDED_VB, effectiveBlock } from "../diagramLayout";
 
-const VB_W = 450;
-const VB_H = 170;
+const VB_W = COMPACT_VB.w;
+const VB_H = COMPACT_VB.h;
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 4;
 const ZOOM_STEP = 0.2;
@@ -40,6 +41,24 @@ const BLOCK_INNERS: Record<string, string[]> = {
   control: ["CLK", "Opcode", "PC_en", "Reg_wr", "Mem_rd/wr"],
 };
 
+/** Straight orthogonal segments + per-edge lane (compact + expanded use the same routing) */
+function diagramEdgePath(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  edgeIndex: number,
+  edgeCount: number
+): string {
+  const lane = (edgeIndex - (edgeCount - 1) / 2) * 16;
+  if (x2 >= x1) {
+    const midX = (x1 + x2) / 2 + lane;
+    return `M ${x1} ${y1} L ${midX} ${y1} L ${midX} ${y2} L ${x2} ${y2}`;
+  }
+  const midY = (y1 + y2) / 2 + lane;
+  return `M ${x1} ${y1} L ${x1} ${midY} L ${x2} ${midY} L ${x2} ${y2}`;
+}
+
 function DiagramContent({
   blocks,
   connections,
@@ -52,6 +71,8 @@ function DiagramContent({
   viewBox = `0 0 ${VB_W} ${VB_H}`,
   onBackgroundMouseDown,
   expanded = false,
+  canvasWidth = VB_W,
+  canvasHeight = VB_H,
 }: {
   blocks: UiBlock[];
   connections: { from: string; to: string }[];
@@ -64,23 +85,41 @@ function DiagramContent({
   viewBox?: string;
   onBackgroundMouseDown?: (e: React.MouseEvent) => void;
   expanded?: boolean;
+  canvasWidth?: number;
+  canvasHeight?: number;
 }) {
   const dragRef = useRef<{ id: string; startX: number; startY: number } | null>(null);
+
+  const blocksLaidOut = useMemo(
+    () => blocks.map((b) => effectiveBlock(b, expanded)),
+    [blocks, expanded]
+  );
+
+  const blockById = useMemo(() => {
+    const m = new Map<string, UiBlock>();
+    blocksLaidOut.forEach((b) => m.set(b.id, b));
+    return m;
+  }, [blocksLaidOut]);
 
   const getPos = (b: UiBlock) => {
     const override = blockPositions[b.id];
     return override ? { x: override.x, y: override.y } : { x: b.x, y: b.y };
   };
 
-  const pixelToViewBox = useCallback((dx: number, dy: number) => {
-    const svg = svgRef?.current;
-    if (!svg) return { dx, dy };
-    const rect = svg.getBoundingClientRect();
-    const [,, vbW, vbH] = viewBox.split(/\s+/).map(Number);
-    const scaleX = (vbW || VB_W) / rect.width;
-    const scaleY = (vbH || VB_H) / rect.height;
-    return { dx: dx * scaleX, dy: dy * scaleY };
-  }, [svgRef, viewBox]);
+  const pixelToViewBox = useCallback(
+    (dx: number, dy: number) => {
+      const svg = svgRef?.current;
+      if (!svg) return { dx, dy };
+      const rect = svg.getBoundingClientRect();
+      const parts = viewBox.split(/\s+/).map(Number);
+      const vbW = parts[2] || canvasWidth;
+      const vbH = parts[3] || canvasHeight;
+      const scaleX = vbW / rect.width;
+      const scaleY = vbH / rect.height;
+      return { dx: dx * scaleX, dy: dy * scaleY };
+    },
+    [svgRef, viewBox, canvasWidth, canvasHeight]
+  );
 
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
@@ -117,23 +156,25 @@ function DiagramContent({
       preserveAspectRatio="xMidYMid meet"
     >
       {connections.map((c, i) => {
-        const from = blocks.find((b) => b.id === c.from);
-        const to = blocks.find((b) => b.id === c.to);
+        const from = blockById.get(c.from);
+        const to = blockById.get(c.to);
         if (!from || !to) return null;
         const fp = getPos(from);
         const tp = getPos(to);
+        const spread = (i % 7) - 3;
+        const yOff = spread * 2.5;
         const x1 = fp.x + from.width;
-        const y1 = fp.y + from.height / 2;
+        const y1 = fp.y + from.height / 2 + yOff;
         const x2 = tp.x;
-        const y2 = tp.y + to.height / 2;
-        const mid = (x1 + x2) / 2;
+        const y2 = tp.y + to.height / 2 + yOff;
+        const d = diagramEdgePath(x1, y1, x2, y2, i, connections.length);
         const isActive = activeConnections.has(`${c.from}->${c.to}`);
         return (
           <path
             key={`c-${i}`}
-            d={`M ${x1} ${y1} C ${mid} ${y1}, ${mid} ${y2}, ${x2} ${y2}`}
+            d={d}
             fill="none"
-            className={`diagram-conn ${isActive ? "active signal-moving" : ""}`}
+            className={`diagram-conn diagram-conn-expanded ${isActive ? "active signal-moving" : ""}`}
           />
         );
       })}
@@ -141,18 +182,22 @@ function DiagramContent({
         <rect
           x={0}
           y={0}
-          width={VB_W}
-          height={VB_H}
+          width={canvasWidth}
+          height={canvasHeight}
           fill="transparent"
           style={{ cursor: "grab" }}
           onMouseDown={onBackgroundMouseDown}
           className="diagram-pan-rect"
         />
       )}
-      {blocks.map((b) => {
+      {blocksLaidOut.map((b) => {
         const pos = getPos(b);
         const inners = BLOCK_INNERS[b.id];
         const isActive = activeBlocks.has(b.id);
+        const titleY = expanded ? 16 : 12;
+        const innerStartY = expanded ? 30 : 26;
+        const lineStep = expanded ? 12 : 0;
+        const showLines = expanded && inners && inners.length > 0;
         return (
           <g
             key={b.id}
@@ -164,27 +209,39 @@ function DiagramContent({
             <rect
               width={b.width}
               height={b.height}
-              rx={6}
-              className={`diagram-block ${isActive ? "active" : ""}`}
+              rx={expanded ? 8 : 6}
+              className={`diagram-block diagram-block--${b.id} ${isActive ? "active" : ""}`}
             />
             <text
               x={b.width / 2}
-              y={12}
+              y={titleY}
               textAnchor="middle"
               className="diagram-block-title"
             >
               {b.label}
             </text>
-            {inners && (
-              <text
-                x={b.width / 2}
-                y={26}
-                textAnchor="middle"
-                className="diagram-block-inner"
-              >
-                {expanded ? inners.join(" · ") : inners.slice(0, 2).join(" | ")}
-              </text>
-            )}
+            {showLines
+              ? inners.slice(0, 5).map((line, idx) => (
+                  <text
+                    key={idx}
+                    x={b.width / 2}
+                    y={innerStartY + idx * lineStep}
+                    textAnchor="middle"
+                    className="diagram-block-inner diagram-block-inner-line"
+                  >
+                    {line.length > 28 ? `${line.slice(0, 26)}…` : line}
+                  </text>
+                ))
+              : inners && (
+                  <text
+                    x={b.width / 2}
+                    y={innerStartY}
+                    textAnchor="middle"
+                    className="diagram-block-inner"
+                  >
+                    {inners.slice(0, 2).join(" | ")}
+                  </text>
+                )}
           </g>
         );
       })}
@@ -221,9 +278,14 @@ export function DiagramPanel() {
     return () => el.removeEventListener("wheel", onWheel);
   }, [archExpanded]);
 
-  const viewBoxW = VB_W / zoom;
-  const viewBoxH = VB_H / zoom;
+  /** Expanded modal uses a larger logical canvas so nodes don’t overlap */
+  const viewBoxW = EXPANDED_VB.w / zoom;
+  const viewBoxH = EXPANDED_VB.h / zoom;
   const viewBox = `${pan.x} ${pan.y} ${viewBoxW} ${viewBoxH}`;
+
+  useEffect(() => {
+    if (archExpanded) resetBlockPositions();
+  }, [archExpanded, resetBlockPositions]);
 
   const handleZoomIn = () => setZoom((z) => Math.min(MAX_ZOOM, z + ZOOM_STEP));
   const handleZoomOut = () => setZoom((z) => Math.max(MIN_ZOOM, z - ZOOM_STEP));
@@ -268,12 +330,17 @@ export function DiagramPanel() {
     );
   }
 
-  const handleBlockDrag = (id: string, dx: number, dy: number) => {
-    const b = uiSchema?.blocks.find((x) => x.id === id);
-    if (!b) return;
-    const prev = blockPositions[id] ?? { x: b.x, y: b.y };
-    setBlockPosition(id, prev.x + dx, prev.y + dy);
-  };
+  const handleBlockDrag = useCallback(
+    (id: string, dx: number, dy: number) => {
+      const b = uiSchema?.blocks.find((x) => x.id === id);
+      if (!b) return;
+      const base = effectiveBlock(b, archExpanded);
+      const pos = useStore.getState().blockPositions[id];
+      const prev = pos ?? { x: base.x, y: base.y };
+      setBlockPosition(id, prev.x + dx, prev.y + dy);
+    },
+    [uiSchema, archExpanded, setBlockPosition]
+  );
 
   const handleBlockDragEnd = () => {};
 
@@ -322,6 +389,8 @@ export function DiagramPanel() {
             onBlockDrag={handleBlockDrag}
             onBlockDragEnd={handleBlockDragEnd}
             svgRef={svgRef}
+            canvasWidth={COMPACT_VB.w}
+            canvasHeight={COMPACT_VB.h}
           />
         </div>
         {traceEvents.length > 0 && (
@@ -341,11 +410,16 @@ export function DiagramPanel() {
       {archExpanded && (
         <div
           className="arch-expanded-overlay"
-          onClick={() => { setArchExpanded(false); handleResetView(); }}
+          onClick={() => {
+            setArchExpanded(false);
+            handleResetView();
+            resetBlockPositions();
+          }}
           onKeyDown={(e) => {
             if (e.key === "Escape") {
               setArchExpanded(false);
               handleResetView();
+              resetBlockPositions();
             }
           }}
           role="button"
@@ -368,7 +442,11 @@ export function DiagramPanel() {
                 <button
                   type="button"
                   className="btn"
-                  onClick={() => { setArchExpanded(false); handleResetView(); }}
+                  onClick={() => {
+                    setArchExpanded(false);
+                    handleResetView();
+                    resetBlockPositions();
+                  }}
                 >
                   ✕ Close
                 </button>
@@ -391,6 +469,8 @@ export function DiagramPanel() {
                 viewBox={viewBox}
                 onBackgroundMouseDown={handleBackgroundMouseDown}
                 expanded
+                canvasWidth={EXPANDED_VB.w}
+                canvasHeight={EXPANDED_VB.h}
               />
             </div>
             <div className="arch-expanded-hint">
