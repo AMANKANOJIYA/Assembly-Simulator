@@ -286,8 +286,6 @@ By contributing, you agree that your contributions are licensed under the **MIT 
 
 ## Screenshots
 
-PNG files are in [`screenshots/`](screenshots/README.md). **Use normal Markdown image lines** (`![alt](screenshots/file.png)`), not fenced ` ```markdown ` blocks — code blocks show the text literally and **will not render images**.
-
 ### Main window
 
 ![Main window — editor, diagram, registers, memory, trace](screenshots/main_window.png)
