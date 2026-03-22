@@ -15,42 +15,48 @@ export function RuntimeConsole() {
     setInputValue("");
   };
 
-  const showOutput = panelVisibility.output;
-  const showInput = panelVisibility.input;
-  const hasContent = !!(runError || ioOutput || ioInputRequested || snapshot);
-  const showConsole = ((showOutput || showInput) && hasContent) || !!runError;
-
-  if (!showConsole) return null;
+  const outputNeeded = (ioOutput?.length ?? 0) > 0;
+  const inputNeeded = !!ioInputRequested;
+  const showOutputSection = panelVisibility.output && outputNeeded;
+  const showInputSection = panelVisibility.input && inputNeeded;
+  const showConsole = showOutputSection || showInputSection || !!runError;
 
   return (
-    <div className="runtime-console">
-      {/* Program Output - visible when panel visibility output is on */}
-      {showOutput && (
+    <div
+      className={`runtime-console${!showConsole ? " runtime-console--idle" : ""}`}
+      data-tour="runtime-console"
+    >
+      {!showConsole ? (
+        <div className="runtime-console-placeholder">
+          <p className="runtime-console-placeholder-title">Program output &amp; I/O</p>
+          <p className="runtime-console-placeholder-text">
+            When you run a program, output and trap/syscall activity appear here. If the panel looks empty, enable{" "}
+            <strong>Program Output</strong> and <strong>Trap / Input</strong> under Settings → Panels.
+          </p>
+        </div>
+      ) : (
         <>
-          <div className="runtime-console-header runtime-console-output">
-            <span>Program Output</span>
-          </div>
-          <div className="runtime-console-body">
-            <pre className="runtime-console-io">{ioOutput || "(no output yet — run a program with ecall/syscall/TRAP print)"}</pre>
-            <div className="runtime-console-hint">
-              RISC-V: a7=11 print int, a7=12 print char. MIPS: v0=1 print int, v0=11 print char. LC-3: TRAP x20 OUT.
-            </div>
-          </div>
-        </>
-      )}
+          {showOutputSection && (
+            <>
+              <div className="runtime-console-header runtime-console-output">
+                <span>Program Output</span>
+              </div>
+              <div className="runtime-console-body">
+                <pre className="runtime-console-io">{ioOutput}</pre>
+                <div className="runtime-console-hint">
+                  RISC-V: a7=11 print int, a7=12 print char. MIPS: v0=1 print int, v0=11 print char. LC-3: TRAP x20 OUT.
+                </div>
+              </div>
+            </>
+          )}
 
-      {/* Trap / Interrupt Input - visible when panel visibility input is on */}
-      {showInput && (
-        <>
-          <div className="runtime-console-header runtime-console-input">
-            <span>Trap / Interrupt Input</span>
-            {ioInputRequested && (
-              <span className="runtime-console-badge">Waiting for input</span>
-            )}
-          </div>
-          <div className="runtime-console-body">
-            {ioInputRequested ? (
-              <>
+          {showInputSection && ioInputRequested && (
+            <>
+              <div className="runtime-console-header runtime-console-input">
+                <span>Trap / Interrupt Input</span>
+                <span className="runtime-console-badge">Waiting for input</span>
+              </div>
+              <div className="runtime-console-body">
                 <p className="runtime-console-prompt">{ioInputRequested.prompt}</p>
                 <div className="runtime-console-input-row">
                   <input
@@ -82,27 +88,24 @@ export function RuntimeConsole() {
                     </button>
                   )}
                 </div>
-              </>
-            ) : (
-              <p className="runtime-console-idle">No trap pending — program is not waiting for input.</p>
-            )}
-          </div>
-        </>
-      )}
+              </div>
+            </>
+          )}
 
-      {/* Runtime Error */}
-      {runError && (
-        <>
-          <div className="runtime-console-header runtime-console-error">
-            <span className="runtime-console-icon">◆</span>
-            <span>Runtime Error</span>
-          </div>
-          <div className="runtime-console-body">
-            <pre className="runtime-console-message">{runError}</pre>
-            <div className="runtime-console-hint">
-              Assembly succeeded but execution failed. Check the PC (program counter) and instruction at the error location.
-            </div>
-          </div>
+          {runError && (
+            <>
+              <div className="runtime-console-header runtime-console-error">
+                <span className="runtime-console-icon">◆</span>
+                <span>Runtime Error</span>
+              </div>
+              <div className="runtime-console-body">
+                <pre className="runtime-console-message">{runError}</pre>
+                <div className="runtime-console-hint">
+                  Assembly succeeded but execution failed. Check the PC (program counter) and instruction at the error location.
+                </div>
+              </div>
+            </>
+          )}
         </>
       )}
     </div>

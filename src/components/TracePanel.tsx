@@ -4,7 +4,7 @@ export function TracePanel() {
   const traceEvents = useStore((s) => s.snapshot?.trace_events ?? []);
 
   return (
-    <div className="panel trace-panel">
+    <div className="panel trace-panel" data-tour="trace">
       <div className="panel-header">
         <h3>Trace / Events</h3>
       </div>

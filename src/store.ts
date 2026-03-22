@@ -7,6 +7,7 @@ import type {
   UiSchema,
   RegisterSchema,
 } from "./types";
+import type { UiFontId, MonoFontId, UiDensity } from "./appearance";
 
 export interface PanelVisibility {
   code: boolean;
@@ -20,6 +21,17 @@ export interface PanelVisibility {
 
 export type PanelId = "registers" | "memory" | "trace";
 
+export type ThemeMode = "dark" | "light";
+
+/** One editor tab (VS Code–style multi-file) */
+export interface EditorTab {
+  id: string;
+  title: string;
+  filePath: string | null;
+}
+
+const INITIAL_EDITOR_TAB_ID = "tab-main";
+
 export interface AsimFileData {
   version: number;
   arch: string;
@@ -29,15 +41,19 @@ export interface AsimFileData {
   entry_point?: string;
   speed: number;
   max_cycle_limit?: number;
+  panel_visibility?: Partial<PanelVisibility>;
 }
 
 export interface AppState {
-  source: string;
+  /** Open editor tabs (titles + paths) */
+  editorTabs: EditorTab[];
+  activeEditorTabId: string;
+  /** Per-tab source buffers */
+  tabBuffers: Record<string, string>;
   arch: string;
   speed: number; // ms per tick
   clockMHz: number; // clock frequency in MHz for real execution time
   memorySize: number;
-  filePath: string | null;
   breakpoints: number[];
   maxCycleLimit: number | null; // null = unlimited
   snapshot: SimulatorStateSnapshot | null;
@@ -55,6 +71,19 @@ export interface AppState {
   cycleGraphOpen: boolean;
   helpOpen: boolean;
   settingsOpen: boolean;
+  onboardingOpen: boolean;
+  /** VS Code–like layout */
+  themeMode: ThemeMode;
+  diagramPanelOpen: boolean;
+  bottomPanelOpen: boolean;
+  /** Single navigator for registers / memory / trace */
+  sidebarView: PanelId;
+  /** Appearance — fonts, density, motion */
+  uiFontFamily: UiFontId;
+  monoFontFamily: MonoFontId;
+  editorFontSize: number;
+  uiDensity: UiDensity;
+  reducedMotion: boolean;
 }
 
 export interface AppActions {
@@ -86,22 +115,41 @@ export interface AppActions {
   setCycleHistoryGraphOpen: (v: boolean) => void;
   setHelpOpen: (v: boolean) => void;
   setSettingsOpen: (v: boolean) => void;
+  setOnboardingOpen: (v: boolean) => void;
+  setThemeMode: (mode: ThemeMode) => void;
+  setDiagramPanelOpen: (v: boolean) => void;
+  setBottomPanelOpen: (v: boolean) => void;
+  setSidebarView: (id: PanelId) => void;
   setFilePath: (p: string | null) => void;
+  addEditorTab: () => void;
+  closeEditorTab: (id: string) => void;
+  setActiveEditorTab: (id: string) => void;
+  renameEditorTab: (id: string, title: string) => void;
   setBreakpoints: (b: number[]) => void;
   toggleBreakpoint: (addr: number) => void;
   setMaxCycleLimit: (n: number | null) => void;
   saveFile: () => Promise<boolean>;
   loadFile: () => Promise<boolean>;
   newFile: () => void;
+  setUiFontFamily: (id: UiFontId) => void;
+  setMonoFontFamily: (id: MonoFontId) => void;
+  setEditorFontSize: (px: number) => void;
+  setUiDensity: (d: UiDensity) => void;
+  setReducedMotion: (v: boolean) => void;
+}
+
+function getActiveSource(state: AppState): string {
+  return state.tabBuffers[state.activeEditorTabId] ?? "";
 }
 
 export const useStore = create<AppState & AppActions>((set, get) => ({
-  source: "",
+  editorTabs: [{ id: INITIAL_EDITOR_TAB_ID, title: "Untitled.asm", filePath: null }],
+  activeEditorTabId: INITIAL_EDITOR_TAB_ID,
+  tabBuffers: { [INITIAL_EDITOR_TAB_ID]: "" },
   arch: "RV32I",
   speed: 100,
   clockMHz: 1000,
   memorySize: 65536,
-  filePath: null,
   breakpoints: [],
   maxCycleLimit: null,
   snapshot: null,
@@ -127,8 +175,24 @@ export const useStore = create<AppState & AppActions>((set, get) => ({
   cycleGraphOpen: false,
   helpOpen: false,
   settingsOpen: false,
+  onboardingOpen: false,
+  themeMode: "dark",
+  diagramPanelOpen: true,
+  bottomPanelOpen: true,
+  sidebarView: "registers",
+  uiFontFamily: "ibm-plex",
+  monoFontFamily: "jetbrains",
+  editorFontSize: 13,
+  uiDensity: "comfortable",
+  reducedMotion: false,
 
-  setSource: (s) => set({ source: s }),
+  setSource: (text) =>
+    set((state) => ({
+      tabBuffers: {
+        ...state.tabBuffers,
+        [state.activeEditorTabId]: text,
+      },
+    })),
   setArch: (a) => set({ arch: a }),
   setSpeed: (s) => set({ speed: s }),
   setClockMHz: (m) => set({ clockMHz: m }),
@@ -137,7 +201,9 @@ export const useStore = create<AppState & AppActions>((set, get) => ({
   setToast: (t) => set({ toast: t }),
 
   assemble: async () => {
-    const { source, arch } = get();
+    const st = get();
+    const source = getActiveSource(st);
+    const { arch } = st;
     try {
       const result = await invoke<{ errors: AssemblerError[]; ok: boolean }>(
         "assemble_check",
@@ -176,7 +242,9 @@ export const useStore = create<AppState & AppActions>((set, get) => ({
   },
 
   run: async () => {
-    const { snapshot, source, arch } = get();
+    const st = get();
+    const { snapshot, arch } = st;
+    const source = getActiveSource(st);
     if (snapshot?.halted) return;
 
     // Ensure program is loaded before run (in case user skipped Assemble)
@@ -282,7 +350,9 @@ export const useStore = create<AppState & AppActions>((set, get) => ({
   },
 
   reset: async () => {
-    const { source, arch, memorySize } = get();
+    const st = get();
+    const { arch, memorySize } = st;
+    const source = getActiveSource(st);
     try {
       const check = await invoke<{ ok: boolean }>("assemble_check", { source, arch });
       if (!check.ok) {
@@ -365,7 +435,54 @@ export const useStore = create<AppState & AppActions>((set, get) => ({
   setCycleHistoryGraphOpen: (v) => set({ cycleGraphOpen: v }),
   setHelpOpen: (v) => set({ helpOpen: v }),
   setSettingsOpen: (v) => set({ settingsOpen: v }),
-  setFilePath: (p) => set({ filePath: p }),
+  setOnboardingOpen: (v) => set({ onboardingOpen: v }),
+  setThemeMode: (mode) => set({ themeMode: mode }),
+  setDiagramPanelOpen: (v) => set({ diagramPanelOpen: v }),
+  setBottomPanelOpen: (v) => set({ bottomPanelOpen: v }),
+  setSidebarView: (id) => set({ sidebarView: id }),
+
+  setFilePath: (p) =>
+    set((state) => ({
+      editorTabs: state.editorTabs.map((t) =>
+        t.id === state.activeEditorTabId ? { ...t, filePath: p } : t
+      ),
+    })),
+
+  addEditorTab: () => {
+    const id = `tab-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    set((state) => ({
+      editorTabs: [
+        ...state.editorTabs,
+        { id, title: "Untitled.asm", filePath: null },
+      ],
+      activeEditorTabId: id,
+      tabBuffers: { ...state.tabBuffers, [id]: "" },
+    }));
+  },
+
+  closeEditorTab: (tabId) =>
+    set((state) => {
+      if (state.editorTabs.length <= 1) return state;
+      const nextTabs = state.editorTabs.filter((t) => t.id !== tabId);
+      const nextBuffers = { ...state.tabBuffers };
+      delete nextBuffers[tabId];
+      const nextActive =
+        state.activeEditorTabId === tabId
+          ? nextTabs[nextTabs.length - 1]!.id
+          : state.activeEditorTabId;
+      return {
+        editorTabs: nextTabs,
+        tabBuffers: nextBuffers,
+        activeEditorTabId: nextActive,
+      };
+    }),
+
+  setActiveEditorTab: (id) => set({ activeEditorTabId: id }),
+
+  renameEditorTab: (id, title) =>
+    set((state) => ({
+      editorTabs: state.editorTabs.map((t) => (t.id === id ? { ...t, title } : t)),
+    })),
   setBreakpoints: (b) => set({ breakpoints: b }),
   toggleBreakpoint: (addr) =>
     set((s) => {
@@ -378,7 +495,9 @@ export const useStore = create<AppState & AppActions>((set, get) => ({
     }),
   setMaxCycleLimit: (n) => set({ maxCycleLimit: n }),
   saveFile: async () => {
-    const { source, arch, memorySize, breakpoints, speed, maxCycleLimit } = get();
+    const st = get();
+    const source = getActiveSource(st);
+    const { arch, memorySize, breakpoints, speed, maxCycleLimit, panelVisibility, activeEditorTabId } = st;
     try {
       const path = await saveDialog({
         filters: [{ name: "Assembly Simulator", extensions: ["asim"] }],
@@ -396,9 +515,15 @@ export const useStore = create<AppState & AppActions>((set, get) => ({
           entry_point: "_start",
           speed,
           max_cycle_limit: maxCycleLimit ?? undefined,
+          panel_visibility: panelVisibility,
         },
       });
-      set({ filePath: path });
+      const name = path.split(/[/\\]/).pop() ?? "project.asim";
+      set((s) => ({
+        editorTabs: s.editorTabs.map((t) =>
+          t.id === activeEditorTabId ? { ...t, filePath: path, title: name } : t
+        ),
+      }));
       get().setToast({ message: "Saved successfully", type: "info" });
       return true;
     } catch (e) {
@@ -415,14 +540,21 @@ export const useStore = create<AppState & AppActions>((set, get) => ({
       });
       if (path == null) return false;
       const data = await invoke<AsimFileData>("read_asim_file", { path });
+      const s = get();
+      const id = `tab-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      const title = path.split(/[/\\]/).pop() ?? "project.asim";
       set({
-        filePath: path,
-        source: data.source,
+        editorTabs: [...s.editorTabs, { id, title, filePath: path }],
+        activeEditorTabId: id,
+        tabBuffers: { ...s.tabBuffers, [id]: data.source },
         arch: data.arch,
         memorySize: data.memory_size ?? 65536,
         breakpoints: data.breakpoints ?? [],
         speed: data.speed ?? 100,
         maxCycleLimit: data.max_cycle_limit ?? null,
+        panelVisibility: data.panel_visibility
+          ? { ...s.panelVisibility, ...data.panel_visibility }
+          : s.panelVisibility,
         errors: [],
         cycleHistory: [],
       });
@@ -436,16 +568,25 @@ export const useStore = create<AppState & AppActions>((set, get) => ({
     }
   },
   newFile: () => {
-    set({
-      source: "",
+    const id = `tab-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    set((state) => ({
+      editorTabs: [...state.editorTabs, { id, title: "Untitled.asm", filePath: null }],
+      activeEditorTabId: id,
+      tabBuffers: { ...state.tabBuffers, [id]: "" },
       arch: "RV32I",
-      filePath: null,
       breakpoints: [],
       errors: [],
       cycleHistory: [],
-    });
+    }));
     get().setToast({ message: "New file", type: "info" });
   },
+
+  setUiFontFamily: (id) => set({ uiFontFamily: id }),
+  setMonoFontFamily: (id) => set({ monoFontFamily: id }),
+  setEditorFontSize: (px) =>
+    set({ editorFontSize: Math.min(20, Math.max(11, Math.round(px))) }),
+  setUiDensity: (d) => set({ uiDensity: d }),
+  setReducedMotion: (v) => set({ reducedMotion: v }),
 }));
 
 const PERSIST_KEY = "asim-session";
@@ -458,6 +599,14 @@ export function loadSession() {
       panelOrder: PanelId[];
       speed: number;
       memorySize: number;
+      themeMode: ThemeMode;
+      diagramPanelOpen: boolean;
+      bottomPanelOpen: boolean;
+      uiFontFamily: UiFontId;
+      monoFontFamily: MonoFontId;
+      editorFontSize: number;
+      uiDensity: UiDensity;
+      reducedMotion: boolean;
     }>;
     useStore.setState((s) => ({
       panelVisibility: data.panelVisibility
@@ -466,6 +615,14 @@ export function loadSession() {
       panelOrder: data.panelOrder ?? s.panelOrder,
       speed: data.speed ?? s.speed,
       memorySize: data.memorySize ?? s.memorySize,
+      themeMode: data.themeMode ?? s.themeMode,
+      diagramPanelOpen: data.diagramPanelOpen ?? s.diagramPanelOpen,
+      bottomPanelOpen: data.bottomPanelOpen ?? s.bottomPanelOpen,
+      uiFontFamily: data.uiFontFamily ?? s.uiFontFamily,
+      monoFontFamily: data.monoFontFamily ?? s.monoFontFamily,
+      editorFontSize: data.editorFontSize ?? s.editorFontSize,
+      uiDensity: data.uiDensity ?? s.uiDensity,
+      reducedMotion: data.reducedMotion ?? s.reducedMotion,
     }));
   } catch {
     // ignore
@@ -481,6 +638,14 @@ export function saveSession() {
         panelOrder: s.panelOrder,
         speed: s.speed,
         memorySize: s.memorySize,
+        themeMode: s.themeMode,
+        diagramPanelOpen: s.diagramPanelOpen,
+        bottomPanelOpen: s.bottomPanelOpen,
+        uiFontFamily: s.uiFontFamily,
+        monoFontFamily: s.monoFontFamily,
+        editorFontSize: s.editorFontSize,
+        uiDensity: s.uiDensity,
+        reducedMotion: s.reducedMotion,
       })
     );
   } catch {

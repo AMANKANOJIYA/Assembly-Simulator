@@ -1,5 +1,7 @@
-//! RISC-V RV32I minimal assembler and executor.
-//! Supports: addi, add, sub, lui, lw, sw, beq, bne, jal, jalr, ecall (halt)
+//! RISC-V RV32I full base assembler and executor.
+//! Supports: LUI, AUIPC, JAL, JALR, BEQ/BNE/BLT/BGE/BLTU/BGEU, LB/LH/LW/LBU/LHU, SB/SH/SW,
+//! ADDI, SLTI, SLTIU, XORI, ORI, ANDI, SLLI, SRLI, SRAI, ADD, SUB, SLT, SLTU, XOR, OR, AND, SLL, SRL, SRA,
+//! ECALL, EBREAK; pseudo: NOP, LI, MV, RET, J.
 
 use crate::memory::Memory;
 use crate::plugin::*;
@@ -439,6 +441,31 @@ impl ArchitecturePlugin for Rv32iPlugin {
                     &format!("x{} ← 0x{:08X}", rd, imm_u),
                 );
             }
+            0x17 => {
+                // auipc: rd = PC + (imm_u)
+                let result = pc.wrapping_add(imm_u);
+                if rd > 0 {
+                    undo_log.push(UndoEntry::RegWrite {
+                        reg: rd,
+                        old_value: regs[rd],
+                        new_value: result,
+                    });
+                    regs[rd] = result;
+                }
+                undo_log.push(UndoEntry::Pc {
+                    old_value: pc,
+                    new_value: next_pc,
+                });
+                events.push(TraceEvent::RegWrite);
+                pipeline_stages = pipeline_5(
+                    Some(instr),
+                    &format!("Load 0x{:08X} from IMem[PC=0x{:08X}]", instr, pc),
+                    &format!("Extract rd=x{}, imm[31:12]=0x{:05X}", rd, imm_u >> 12),
+                    &format!("Execute: PC + 0x{:08X} = 0x{:08X}", imm_u, result),
+                    "NOP (no memory access)",
+                    &format!("x{} ← 0x{:08X}", rd, result),
+                );
+            }
             0x03 => {
                 // lb, lh, lw, lbu, lhu
                 events.push(TraceEvent::Mem);
@@ -672,12 +699,36 @@ impl ArchitecturePlugin for Rv32iPlugin {
                 );
             }
             0x73 => {
+                // ecall / ebreak: imm[11:0]=1 -> ebreak (halt)
+                let imm_12 = (instr >> 20) & 0xFFF;
+                if imm_12 == 1 {
+                    // ebreak: halt for debugger
+                    undo_log.push(UndoEntry::Pc { old_value: pc, new_value: next_pc });
+                    return StepResult {
+                        new_state: CpuState { pc: next_pc, regs, halted: true },
+                        events: vec![TraceEvent::Fetch, TraceEvent::Decode, TraceEvent::Halted],
+                        undo_log,
+                        cycles_added: 3,
+                        halted: true,
+                        error: None,
+                        instruction_bits: Some(instr),
+                        pipeline_stages: pipeline_halt(
+                            Some(instr),
+                            &format!("Load 0x{:08X} from IMem[PC=0x{:08X}]", instr, pc),
+                            "Decode: ebreak (breakpoint)",
+                            "Halted",
+                        ),
+                        io_output: None,
+                        io_input_requested: None,
+                    };
+                }
                 // ecall - a7=10 exit, a7=11 print_int, a7=12 print_char, a7=5 read_int, a7=8 read_string, a7=12 read_char
                 let a7 = regs[17];
                 let a0 = regs[10] as i32;
                 let a1 = regs[11];
                 let (halt, io_out) = match a7 {
-                    10 => (true, None),
+                    10 => (true, None),  // exit
+                    93 => (true, None),  // exit with code (a0); we just halt
                     4 => {
                         // Print string: a0 = address of null-terminated string
                         let mut s = String::new();
@@ -819,6 +870,8 @@ impl ArchitecturePlugin for Rv32iPlugin {
                 };
                 let action_str = if let Some(ref s) = io_out {
                     format!("ecall: print \"{}\"", s.replace('\n', "\\n"))
+                } else if a7 == 93 {
+                    format!("ecall 93: exit with code {}", a0)
                 } else {
                     "ecall: halt".to_string()
                 };
@@ -1228,6 +1281,24 @@ fn parse_instruction(
                 args[1].parse().map_err(|_| AssemblerError { line: line_num, column: col, message: format!("Invalid imm: {}", args[1]) })?
             };
             encode(encode_u(0x37, rd, imm));
+        }
+        "auipc" => {
+            if args.len() != 2 {
+                return Err(AssemblerError { line: line_num, column: col, message: "auipc rd, imm".to_string() });
+            }
+            let rd = parse_reg(args[0]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[0]) })?;
+            let imm: u32 = if args[1].starts_with("0x") {
+                u32::from_str_radix(args[1].trim_start_matches("0x"), 16).map_err(|_| AssemblerError { line: line_num, column: col, message: format!("Invalid imm: {}", args[1]) })?
+            } else {
+                args[1].parse().map_err(|_| AssemblerError { line: line_num, column: col, message: format!("Invalid imm: {}", args[1]) })?
+            };
+            encode(encode_u(0x17, rd, imm & 0xFFFFF000));
+        }
+        "ebreak" => {
+            if !args.is_empty() {
+                return Err(AssemblerError { line: line_num, column: col, message: "ebreak (no args)".to_string() });
+            }
+            encode(encode_i(0x73, 0, 0, 0, 1));
         }
         "lb" => {
             if args.len() != 2 { return Err(AssemblerError { line: line_num, column: col, message: "lb rd, offset(rs1)".to_string() }); }

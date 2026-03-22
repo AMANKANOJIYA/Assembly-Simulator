@@ -1,7 +1,7 @@
 //! Simulator state machine: holds CPU state, memory, undo stack for step-back.
 
 use crate::memory::Memory;
-use crate::plugin::{InputRequest, Lc3Plugin, MipsPlugin, Rv32iPlugin, *};
+use crate::plugin::{InputRequest, I6502Plugin, I8085Plugin, I8086Plugin, Lc3Plugin, MipsPlugin, Rv32iPlugin, *};
 
 #[derive(Clone, Debug, serde::Serialize)]
 pub struct CycleDetail {
@@ -79,6 +79,18 @@ impl Simulator {
             "MIPS" => {
                 static MIPS: std::sync::OnceLock<MipsPlugin> = std::sync::OnceLock::new();
                 MIPS.get_or_init(MipsPlugin::new)
+            }
+            "8085" => {
+                static I8085: std::sync::OnceLock<I8085Plugin> = std::sync::OnceLock::new();
+                I8085.get_or_init(I8085Plugin::new)
+            }
+            "6502" => {
+                static I6502: std::sync::OnceLock<I6502Plugin> = std::sync::OnceLock::new();
+                I6502.get_or_init(I6502Plugin::new)
+            }
+            "8086" => {
+                static I8086: std::sync::OnceLock<I8086Plugin> = std::sync::OnceLock::new();
+                I8086.get_or_init(I8086Plugin::new)
             }
             _ => {
                 static RV32I: std::sync::OnceLock<Rv32iPlugin> = std::sync::OnceLock::new();

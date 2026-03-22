@@ -103,7 +103,9 @@ impl ArchitecturePlugin for Lc3Plugin {
         let mut source_map = Vec::new();
         let mut errors = Vec::new();
         let mut labels: HashMap<String, u32> = HashMap::new();
-        let mut pending_refs: Vec<(usize, String, u32, u8)> = Vec::new();
+        // (byte_offset_in_output, pc_at_instruction, label, line_num, ref_type_bits)
+        // For PC-relative encodings (BR/LD/LEA/...): immediate is in *words* relative to (PC+2).
+        let mut pending_refs: Vec<(usize, u32, String, u32, u8)> = Vec::new();
         let mut start_pc: u32 = 0x3000;
 
         let lines: Vec<&str> = source.lines().collect();
@@ -166,21 +168,49 @@ impl ArchitecturePlugin for Lc3Plugin {
             }
         }
 
-        for (offset, label, line_num, ref_type) in pending_refs {
+        for (byte_offset, pc_at_insn, label, line_num, ref_type) in pending_refs {
             if let Some(&target) = labels.get(&label) {
-                let pos = offset as u32;
-                let base_pc = pos; // PC at instruction
-                let imm9 = ((target as i32 - base_pc as i32) & 0x1FF) as u16;
-                let imm11 = ((target as i32 - base_pc as i32) & 0x7FF) as u16;
-                let insn = u16::from_le_bytes([bytes[offset], bytes[offset + 1]]);
+                // LC-3 PC-relative offsets are measured in *words* from the incremented PC (PC+2 bytes).
+                let base = (pc_at_insn.wrapping_add(2)) & 0xFFFF;
+                let diff_bytes = (target as i32) - (base as i32);
+                let diff_words = diff_bytes / 2;
+
+                let insn = u16::from_le_bytes([bytes[byte_offset], bytes[byte_offset + 1]]);
                 let patched = match ref_type {
-                    9 => (insn & 0xFE00) | (imm9 & 0x1FF),
-                    11 => (insn & 0x0800) | (imm11 & 0x7FF), // keep bit 11
+                    9 => {
+                        if diff_words < -256 || diff_words > 255 {
+                            errors.push(AssemblerError {
+                                line: line_num,
+                                column: 1,
+                                message: format!("Label '{}' out of range for PCoffset9", label),
+                            });
+                            insn
+                        } else {
+                            (insn & 0xFE00) | ((diff_words as u16) & 0x01FF)
+                        }
+                    }
+                    11 => {
+                        if diff_words < -1024 || diff_words > 1023 {
+                            errors.push(AssemblerError {
+                                line: line_num,
+                                column: 1,
+                                message: format!("Label '{}' out of range for PCoffset11", label),
+                            });
+                            insn
+                        } else {
+                            // keep bit 11 (JSR vs JSRR selector), patch the remaining 11 bits
+                            (insn & 0xF800) | ((diff_words as u16) & 0x07FF)
+                        }
+                    }
                     _ => insn,
                 };
-                bytes[offset..offset + 2].copy_from_slice(&patched.to_le_bytes());
+                bytes[byte_offset..byte_offset + 2].copy_from_slice(&patched.to_le_bytes());
             } else {
-                errors.push(AssemblerError { line: line_num, column: 1, message: format!("Unknown label: {}", label) });
+                errors.push(AssemblerError {
+                    line: line_num,
+                    column: 1,
+                    message: format!("Unknown label: {}", label),
+                });
             }
         }
 
@@ -345,7 +375,8 @@ fn set_cc(val: u16) -> (u32, u32, u32) {
                 // BR
                 let take = (n != 0 && cc_n != 0) || (z != 0 && cc_z != 0) || (p != 0 && cc_p != 0)
                     || (n == 0 && z == 0 && p == 0);
-                let target = (pc.wrapping_add(pcoffset9 as u32)) & 0xFFFF;
+                // PC-relative offsets are in words; this simulator uses byte addressing, so scale by 2.
+                let target = (next_pc.wrapping_add(((pcoffset9 as i16 as i32) * 2) as u32)) & 0xFFFF;
                 let next = if take { target } else { next_pc };
                 undo_log.push(UndoEntry::Pc { old_value: pc, new_value: next });
                 let exec_str = if take {
@@ -378,7 +409,7 @@ fn set_cc(val: u16) -> (u32, u32, u32) {
             0b0100 => {
                 if (instr_u16 & 0x0800) != 0 {
                     // JSR: R7 = PC+2, PC = PC + SEXT(PCoffset11)
-                    let target = (pc.wrapping_add(pcoffset11 as u32)) & 0xFFFF;
+                    let target = (next_pc.wrapping_add(((pcoffset11 as i16 as i32) * 2) as u32)) & 0xFFFF;
                     undo_log.push(UndoEntry::RegWrite { reg: 7, old_value: regs[7] as u32, new_value: next_pc as u32 });
                     regs[7] = next_pc;
                     undo_log.push(UndoEntry::Pc { old_value: pc, new_value: target });
@@ -411,7 +442,7 @@ fn set_cc(val: u16) -> (u32, u32, u32) {
             0b0010 => {
                 // LD: DR = mem[PC + PCoffset9]
                 events.push(TraceEvent::Mem);
-                let addr = (pc.wrapping_add(pcoffset9 as u32)) & 0xFFFF;
+                let addr = (next_pc.wrapping_add(((pcoffset9 as i16 as i32) * 2) as u32)) & 0xFFFF;
                 let val = match mem.read_u16_le(addr) {
                     Ok(v) => v,
                     Err(e) => {
@@ -448,7 +479,7 @@ fn set_cc(val: u16) -> (u32, u32, u32) {
             0b1010 => {
                 // LDI: DR = mem[mem[PC+PCoffset9]]
                 events.push(TraceEvent::Mem);
-                let ptr_addr = (pc.wrapping_add(pcoffset9 as u32)) & 0xFFFF;
+                let ptr_addr = (next_pc.wrapping_add(((pcoffset9 as i16 as i32) * 2) as u32)) & 0xFFFF;
                 let addr = match mem.read_u16_le(ptr_addr) {
                     Ok(a) => (a as u32) & 0xFFFF,
                     Err(e) => {
@@ -502,7 +533,8 @@ fn set_cc(val: u16) -> (u32, u32, u32) {
             0b0110 => {
                 // LDR: DR = mem[BaseR + offset6]
                 events.push(TraceEvent::Mem);
-                let addr = ((regs[base_r] as u32).wrapping_add(offset6 as u32)) & 0xFFFF;
+                let addr =
+                    ((regs[base_r] as u32).wrapping_add(((offset6 as i16 as i32) * 2) as u32)) & 0xFFFF;
                 let val = match mem.read_u16_le(addr) {
                     Ok(v) => v,
                     Err(e) => {
@@ -538,7 +570,7 @@ fn set_cc(val: u16) -> (u32, u32, u32) {
             }
             0b1110 => {
                 // LEA: DR = PC + PCoffset9
-                let val = pc.wrapping_add(pcoffset9 as u32) & 0xFFFF;
+                let val = next_pc.wrapping_add(((pcoffset9 as i16 as i32) * 2) as u32) & 0xFFFF;
                 let (n, z, p) = set_cc(val as u16);
                 regs[8] = (n << 2) | (z << 1) | p;
                 undo_log.push(UndoEntry::RegWrite { reg: 8, old_value: psr, new_value: regs[8] });
@@ -558,7 +590,7 @@ fn set_cc(val: u16) -> (u32, u32, u32) {
             0b0011 => {
                 // ST: mem[PC + PCoffset9] = SR
                 events.push(TraceEvent::Mem);
-                let addr = (pc.wrapping_add(pcoffset9 as u32)) & 0xFFFF;
+                let addr = (next_pc.wrapping_add(((pcoffset9 as i16 as i32) * 2) as u32)) & 0xFFFF;
                 let val = regs[dr] as u16;
                 let old = match mem.write_u16_le(addr, val) {
                     Ok(o) => o,
@@ -597,7 +629,7 @@ fn set_cc(val: u16) -> (u32, u32, u32) {
             0b1011 => {
                 // STI: mem[mem[PC+PCoffset9]] = SR
                 events.push(TraceEvent::Mem);
-                let ptr_addr = (pc.wrapping_add(pcoffset9 as u32)) & 0xFFFF;
+                let ptr_addr = (next_pc.wrapping_add(((pcoffset9 as i16 as i32) * 2) as u32)) & 0xFFFF;
                 let addr = match mem.read_u16_le(ptr_addr) {
                     Ok(a) => (a as u32) & 0xFFFF,
                     Err(e) => {
@@ -649,7 +681,8 @@ fn set_cc(val: u16) -> (u32, u32, u32) {
             0b0111 => {
                 // STR: mem[BaseR + offset6] = SR
                 events.push(TraceEvent::Mem);
-                let addr = ((regs[base_r] as u32).wrapping_add(offset6 as u32)) & 0xFFFF;
+                let addr =
+                    ((regs[base_r] as u32).wrapping_add(((offset6 as i16 as i32) * 2) as u32)) & 0xFFFF;
                 let val = regs[dr] as u16;
                 let old = match mem.write_u16_le(addr, val) {
                     Ok(o) => o,
@@ -697,6 +730,30 @@ fn set_cc(val: u16) -> (u32, u32, u32) {
                                 Err(_) => break,
                             }
                             addr += 1;
+                        }
+                        (false, Some(s), None)
+                    }
+                    0x24 => {
+                        // PUTSP: R0 = address of string; each word = two bytes (low byte first), stop at 0x0000
+                        let mut s = String::new();
+                        let mut addr = (regs[0] as u32) & 0xFFFF;
+                        loop {
+                            let word = match mem.read_u16_le(addr) {
+                                Ok(w) => w,
+                                Err(_) => break,
+                            };
+                            if word == 0 {
+                                break;
+                            }
+                            let lo = (word & 0xFF) as u8;
+                            let hi = (word >> 8) as u8;
+                            if lo != 0 {
+                                s.push(lo as char);
+                            }
+                            if hi != 0 {
+                                s.push(hi as char);
+                            }
+                            addr += 2;
                         }
                         (false, Some(s), None)
                     }
@@ -799,6 +856,7 @@ fn set_cc(val: u16) -> (u32, u32, u32) {
                 undo_log.push(UndoEntry::Pc { old_value: pc, new_value: next_pc });
                 let action_str = match (trapvect, &io_out, reg_write) {
                     (0x21, Some(s), _) => format!("TRAP: PUTS \"{}\"", s.replace('\n', "\\n")),
+                    (0x24, Some(s), _) => format!("TRAP: PUTSP \"{}\"", s.replace('\n', "\\n")),
                     (0x22, _, Some(v)) => format!("TRAP: IN → R0 ← '{}' (0x{:02X})", (v & 0xFF) as u8 as char, v & 0xFF),
                     (0x23, _, Some(v)) => format!("TRAP: GETC → R0 ← '{}' (0x{:02X})", (v & 0xFF) as u8 as char, v & 0xFF),
                     (0x25, _, _) => "TRAP x25: HALT".to_string(),
@@ -939,7 +997,7 @@ fn parse_lc3_instruction(
     bytes: &mut Vec<u8>,
     source_map: &mut Vec<SourceMapEntry>,
     errors: &mut Vec<AssemblerError>,
-    pending_refs: &mut Vec<(usize, String, u32, u8)>,
+    pending_refs: &mut Vec<(usize, u32, String, u32, u8)>,
 ) -> Result<u32, AssemblerError> {
     let tokens: Vec<&str> = line.split_whitespace().collect();
     if tokens.is_empty() {
@@ -1049,7 +1107,7 @@ fn parse_lc3_instruction(
             }
             let base: u16 = 0x0000 | (n << 11) | (z << 10) | (p << 9);
             let pos = encode(base);
-            pending_refs.push((pos, args[0].to_string(), line_num, 9));
+            pending_refs.push((pos, pc, args[0].to_string(), line_num, 9));
         }
         "JMP" | "RET" => {
             if mnemonic == "RET" {
@@ -1066,7 +1124,7 @@ fn parse_lc3_instruction(
                 return Err(AssemblerError { line: line_num, column: col, message: "JSR label".to_string() });
             }
             let pos = encode(0x4800u16);
-            pending_refs.push((pos, args[0].to_string(), line_num, 11));
+            pending_refs.push((pos, pc, args[0].to_string(), line_num, 11));
         }
         "JSRR" => {
             if args.len() != 1 {
@@ -1081,7 +1139,7 @@ fn parse_lc3_instruction(
             }
             let dr = parse_reg(args[0]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[0]) })?;
             let pos = encode((0x2000u32 | (dr << 9)) as u16);
-            pending_refs.push((pos, args[1].to_string(), line_num, 9));
+            pending_refs.push((pos, pc, args[1].to_string(), line_num, 9));
         }
         "LDI" => {
             if args.len() != 2 {
@@ -1089,7 +1147,7 @@ fn parse_lc3_instruction(
             }
             let dr = parse_reg(args[0]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[0]) })?;
             let pos = encode((0xA000u32 | (dr << 9)) as u16);
-            pending_refs.push((pos, args[1].to_string(), line_num, 9));
+            pending_refs.push((pos, pc, args[1].to_string(), line_num, 9));
         }
         "LDR" => {
             if args.len() != 3 {
@@ -1107,7 +1165,7 @@ fn parse_lc3_instruction(
             }
             let dr = parse_reg(args[0]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[0]) })?;
             let pos = encode((0xE000u32 | (dr << 9)) as u16);
-            pending_refs.push((pos, args[1].to_string(), line_num, 9));
+            pending_refs.push((pos, pc, args[1].to_string(), line_num, 9));
         }
         "ST" => {
             if args.len() != 2 {
@@ -1115,7 +1173,7 @@ fn parse_lc3_instruction(
             }
             let sr = parse_reg(args[0]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[0]) })?;
             let pos = encode((0x3000u32 | (sr << 9)) as u16);
-            pending_refs.push((pos, args[1].to_string(), line_num, 9));
+            pending_refs.push((pos, pc, args[1].to_string(), line_num, 9));
         }
         "STI" => {
             if args.len() != 2 {
@@ -1123,7 +1181,7 @@ fn parse_lc3_instruction(
             }
             let sr = parse_reg(args[0]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[0]) })?;
             let pos = encode((0xB000u32 | (sr << 9)) as u16);
-            pending_refs.push((pos, args[1].to_string(), line_num, 9));
+            pending_refs.push((pos, pc, args[1].to_string(), line_num, 9));
         }
         "STR" => {
             if args.len() != 3 {
@@ -1154,4 +1212,54 @@ fn parse_lc3_instruction(
     }
 
     Ok(1)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lc3_assembles_pc_relative_labels_from_pc_plus_2_in_words() {
+        let p = Lc3Plugin::new();
+        // At x3000: BRnzp target; next_pc = x3002; target at x3006 => diff_bytes=4 => diff_words=2
+        let src = r#"
+.ORIG x3000
+_start:
+  BRnzp target
+  NOP
+  NOP
+target:
+  NOP
+.END
+"#;
+        let img = p.assemble(src);
+        assert!(img.errors.is_empty(), "errors: {:?}", img.errors);
+        let br = u16::from_le_bytes([img.bytes[0], img.bytes[1]]);
+        // BR with NZP=111 sets bits 11..9 => 0b111 at 0x0E00
+        assert_eq!(br & 0xFE00, 0x0E00);
+        assert_eq!(br & 0x01FF, 2);
+    }
+
+    #[test]
+    fn lc3_executes_pc_relative_using_next_pc_and_word_scaling() {
+        let p = Lc3Plugin::new();
+        // BRnzp to the label two bytes ahead (1 word) should jump to x3004.
+        let src = r#"
+.ORIG x3000
+_start:
+  BRnzp target
+  NOP
+target:
+  NOP
+.END
+"#;
+        let img = p.assemble(src);
+        assert!(img.errors.is_empty(), "errors: {:?}", img.errors);
+        let mut mem = vec![0u8; 0x10000];
+        mem[0x3000..0x3000 + img.bytes.len()].copy_from_slice(&img.bytes);
+        let state = CpuState { pc: 0x3000, regs: vec![0u32; 9], halted: false };
+        let r = p.step(&state, &mem, StepMode::Instruction, None);
+        assert!(r.error.is_none(), "error: {:?}", r.error);
+        assert_eq!(r.new_state.pc, 0x3004);
+    }
 }

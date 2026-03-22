@@ -859,202 +859,7 @@
   color: #94a3b8;
 }
 
-/* Cycle graph - bottom drawer */
-.cycle-graph-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 2000;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  animation: cycle-overlay-in 0.2s ease-out;
-}
-@keyframes cycle-overlay-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-.cycle-graph-popup {
-  background: rgba(24, 28, 42, 0.98);
-  border-radius: 16px 16px 0 0;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-bottom: none;
-  width: 100%;
-  max-width: 100%;
-  height: 65vh;
-  max-height: 85vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
-  animation: cycle-drawer-in 0.25s ease-out;
-}
-@keyframes cycle-drawer-in {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
-}
-.cycle-graph-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  flex-wrap: wrap;
-  gap: 12px;
-  flex-shrink: 0;
-}
-.cycle-graph-header h3 {
-  margin: 0;
-  font-size: 1rem;
-}
-.cycle-graph-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-.cycle-clock-input-wrap {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.8);
-}
-.cycle-clock-input {
-  width: 70px;
-  padding: 4px 8px;
-  font-size: 0.85rem;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(0, 0, 0, 0.3);
-  color: #e8e8e8;
-}
-.cycle-graph-body {
-  padding: 20px;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-.cycle-graph-empty {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 0.9rem;
-  padding: 40px;
-  text-align: center;
-}
-.cycle-wave-container {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  min-width: 0;
-}
-.cycle-wave-container .cycle-graph-meta,
-.cycle-wave-container .cycle-wave-scroll,
-.cycle-wave-container .cycle-graph-clock-hint {
-  flex-shrink: 0;
-}
-.cycle-graph-meta {
-  display: flex;
-  gap: 24px;
-  margin-bottom: 12px;
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.8);
-}
-.cycle-graph-meta strong {
-  color: #7dd3fc;
-}
-.cycle-wave-scroll {
-  overflow-x: auto;
-  overflow-y: hidden;
-  min-height: 60px;
-  flex-shrink: 0;
-}
-.cycle-wave-svg {
-  display: block;
-}
-.cycle-wave-svg .cycle-label {
-  fill: rgba(255, 255, 255, 0.7);
-  font-size: 10px;
-  font-family: "JetBrains Mono", monospace;
-}
-.cycle-wave-svg .cycle-label.selected {
-  fill: #fbbf24;
-  font-weight: 600;
-}
-.cycle-table-wrap {
-  margin-top: 16px;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: auto;
-  width: 100%;
-}
-.cycle-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.75rem;
-  font-family: "JetBrains Mono", monospace;
-}
-.cycle-table th {
-  text-align: left;
-  padding: 8px 12px;
-  background: rgba(0, 0, 0, 0.3);
-  color: rgba(255, 255, 255, 0.7);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-  white-space: nowrap;
-}
-.cycle-table td {
-  padding: 8px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  vertical-align: top;
-}
-.cycle-table tbody tr {
-  cursor: pointer;
-}
-.cycle-table tbody tr:hover {
-  background: rgba(125, 211, 252, 0.08);
-}
-.cycle-table tbody tr.selected {
-  background: rgba(251, 191, 36, 0.2);
-}
-.cycle-table .instr-mnemonic {
-  color: #7dd3fc;
-  font-weight: 600;
-}
-.cycle-table .instr-breakdown {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 12px;
-  font-size: 0.7rem;
-}
-.cycle-table .breakdown-field {
-  color: rgba(255, 255, 255, 0.9);
-}
-.cycle-table .cycle-action-cell {
-  color: rgba(255, 255, 255, 0.9);
-  max-width: 280px;
-  word-wrap: break-word;
-}
-.cycle-table .stage-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 0.7rem;
-  font-weight: 500;
-}
-.cycle-table .stage-fetch { background: rgba(99, 102, 241, 0.4); color: #a5b4fc; }
-.cycle-table .stage-decode { background: rgba(34, 197, 94, 0.4); color: #86efac; }
-.cycle-table .stage-execute { background: rgba(245, 158, 11, 0.4); color: #fcd34d; }
-.cycle-table .stage-memory { background: rgba(236, 72, 153, 0.4); color: #f9a8d4; }
-.cycle-table .stage-write-back { background: rgba(14, 165, 233, 0.4); color: #7dd3fc; }
-.cycle-table .stage-halted { background: rgba(239, 68, 68, 0.4); color: #fca5a5; }
-.cycle-graph-clock-hint {
-  margin-top: 8px;
-  font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.4);
-}
+/* Cycle graph: see layout-shell.css (theme tokens) */
 
 /* Runtime console (output + trap input) */
 .runtime-console {
@@ -1342,6 +1147,143 @@
   align-items: center;
   justify-content: center;
   animation: cycle-overlay-in 0.2s ease-out;
+}
+
+/* Onboarding tutorial overlay */
+.onboard-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.62);
+  z-index: 2500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: cycle-overlay-in 0.2s ease-out;
+}
+.onboard-popup {
+  background: rgba(24, 28, 42, 0.98);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  width: 92%;
+  max-width: 620px;
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
+  animation: cycle-drawer-in 0.25s ease-out;
+}
+.onboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.onboard-header-left {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.onboard-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+.onboard-step {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.55);
+  font-family: "JetBrains Mono", monospace;
+}
+.onboard-body {
+  padding: 18px 20px;
+  overflow-y: auto;
+  line-height: 1.5;
+}
+.onboard-body h3 {
+  margin: 0 0 10px;
+  color: #7dd3fc;
+  font-size: 1rem;
+}
+.onboard-content p {
+  margin: 0 0 10px;
+  color: rgba(255, 255, 255, 0.88);
+}
+.onboard-content ul {
+  margin: 0 0 10px;
+  padding-left: 18px;
+  color: rgba(255, 255, 255, 0.85);
+}
+.onboard-muted {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.85rem;
+}
+.onboard-footer {
+  display: flex;
+  align-items: center;
+  padding: 14px 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.onboard-footer-spacer {
+  flex: 1;
+}
+.onboard-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* Spotlight tour (targeted arrows + blur) */
+.onboard-overlay.onboard-spotlight {
+  align-items: stretch;
+  justify-content: stretch;
+  background: transparent;
+}
+
+.onboard-spotlight-dim {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(6px);
+  z-index: 2500;
+}
+
+.onboard-spotlight-dim-slice {
+  position: fixed;
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(6px);
+  z-index: 2500;
+}
+
+.onboard-spotlight-highlight {
+  position: fixed;
+  border-radius: 12px;
+  outline: 2px solid rgba(125, 211, 252, 0.95);
+  box-shadow:
+    0 0 0 2px rgba(125, 211, 252, 0.25),
+    0 0 30px rgba(125, 211, 252, 0.25);
+  pointer-events: none;
+  z-index: 2502;
+}
+
+.onboard-spotlight-card {
+  position: fixed;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: rgba(24, 28, 42, 0.98);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
+  z-index: 2503;
+}
+
+.onboard-arrow-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2502;
 }
 .help-popup {
   background: rgba(24, 28, 42, 0.98);

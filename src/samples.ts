@@ -209,12 +209,100 @@ my_func:
   jr   $ra
 `;
 
+// 8085 samples
+export const SAMPLE_8085_SIMPLE = `; Intel 8085: Add two numbers
+.ORG 0
+_start:
+  MVI A, 10
+  MVI B, 20
+  ADD B
+  HLT
+`;
+
+export const SAMPLE_8085_FULL = `; 8085: MVI, MOV, ADD, ADI, LXI, JMP, JZ, CALL, RET
+.ORG 0
+_start:
+  MVI A, 0
+  MVI B, 10
+  ADI 5
+  MOV C, A
+  ADD B
+  JZ done
+  JMP _start
+done:
+  HLT
+`;
+
+// 6502 samples
+export const SAMPLE_6502_SIMPLE = `; 6502: Load and add
+_start:
+  LDA #10
+  LDX #20
+  TAX
+  LDA #0
+  ADC #5
+  NOP
+  BRK
+`;
+
+export const SAMPLE_6502_FULL = `; 6502: LDA, STA, JMP, JSR, RTS, branches
+_start:
+  LDA #0
+  STA $0200
+  JSR inc_it
+  LDA $0200
+  CMP #1
+  BEQ ok
+  JMP _start
+ok:
+  BRK
+inc_it:
+  LDA $0200
+  ADC #1
+  STA $0200
+  RTS
+`;
+
+// 8086 samples
+export const SAMPLE_8086_SIMPLE = `; Intel 8086: Registers and ADD
+_start:
+  MOV AX, 0x0A
+  MOV BX, 0x14
+  ADD AX, BX
+  HLT
+`;
+
+export const SAMPLE_8086_FULL = `; 8086: MOV, ADD, SUB, PUSH, POP, JZ, JNZ
+_start:
+  MOV AX, 0
+  MOV BX, 0x0A
+  ADD AX, BX
+  SUB AX, BX
+  PUSH AX
+  POP CX
+  JZ zero
+  JNZ notzero
+zero:
+  MOV DX, 1
+  JMP done
+notzero:
+  MOV DX, 2
+done:
+  HLT
+`;
+
 export function getDefaultSample(arch: string): string {
   switch (arch) {
     case "LC3":
       return SAMPLE_LC3_FULL;
     case "MIPS":
       return SAMPLE_MIPS_FULL;
+    case "8085":
+      return SAMPLE_8085_FULL;
+    case "6502":
+      return SAMPLE_6502_FULL;
+    case "8086":
+      return SAMPLE_8086_FULL;
     default:
       return SAMPLE_FULL;
   }

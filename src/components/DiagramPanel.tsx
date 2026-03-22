@@ -290,7 +290,7 @@ export function DiagramPanel() {
 
   return (
     <>
-      <div className="panel diagram-panel">
+      <div className="panel diagram-panel" data-tour="diagram">
         <div className="panel-header">
           <h3>Architecture (Inner View)</h3>
           <div className="diagram-actions">

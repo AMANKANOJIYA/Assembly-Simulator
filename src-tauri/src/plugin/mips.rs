@@ -1,5 +1,7 @@
-//! MIPS32 minimal assembler and executor.
-//! Supports: add, sub, and, or, addi, lw, sw, beq, bne, j, jal, jr, syscall, li, nop
+//! MIPS32 full base assembler and executor.
+//! Supports: add, sub, and, or, nor, xor, sll, srl, sra, sllv, srlv, srav, slt, sltu, slti, sltiu,
+//! addi, xori, lb, lh, lw, sb, sh, sw, beq, bne, j, jal, jr, jalr, syscall, mult, multu, div, divu, mfhi, mflo, li, lui, nop.
+//! HI/LO in regs[32], regs[33].
 
 use crate::memory::Memory;
 use crate::plugin::*;
@@ -180,7 +182,7 @@ impl ArchitecturePlugin for MipsPlugin {
     fn reset(&self, _config: &ResetConfig) -> CpuState {
         CpuState {
             pc: 0,
-            regs: vec![0u32; 32],
+            regs: vec![0u32; 34], // $0-$31, then HI (32), LO (33)
             halted: false,
         }
     }
@@ -206,6 +208,9 @@ impl ArchitecturePlugin for MipsPlugin {
 
         let pc = state.pc;
         let mut regs = state.regs.clone();
+        while regs.len() < 34 {
+            regs.push(0);
+        }
 
         let instr = match mem.read_u32_le(pc) {
             Ok(i) => i,
@@ -337,6 +342,171 @@ impl ArchitecturePlugin for MipsPlugin {
                         &format!("${} ← {}", rd, result),
                     )
                 }
+                0x2B => {
+                    // SLTU
+                    let result = if regs[rs] < regs[rt] { 1u32 } else { 0u32 };
+                    if rd > 0 {
+                        undo_log.push(UndoEntry::RegWrite { reg: rd, old_value: regs[rd], new_value: result });
+                        regs[rd] = result;
+                    }
+                    undo_log.push(UndoEntry::Pc { old_value: pc, new_value: next_pc });
+                    events.push(TraceEvent::RegWrite);
+                    pipeline_5(
+                        Some(instr),
+                        &format!("Load 0x{:08X} from IMem[PC=0x{:08X}]", instr, pc),
+                        "Decode SLTU",
+                        &format!("ALU: (${} < ${} unsigned) ? 1 : 0 = {}", rs, rt, result),
+                        "NOP",
+                        &format!("${} ← {}", rd, result),
+                    )
+                }
+                0x26 => {
+                    // XOR
+                    let result = regs[rs] ^ regs[rt];
+                    if rd > 0 {
+                        undo_log.push(UndoEntry::RegWrite { reg: rd, old_value: regs[rd], new_value: result });
+                        regs[rd] = result;
+                    }
+                    undo_log.push(UndoEntry::Pc { old_value: pc, new_value: next_pc });
+                    events.push(TraceEvent::RegWrite);
+                    pipeline_5(
+                        Some(instr),
+                        &format!("Load 0x{:08X} from IMem[PC=0x{:08X}]", instr, pc),
+                        "Decode XOR",
+                        &format!("ALU: ${} ^ ${} = {}", rs, rt, result),
+                        "NOP",
+                        &format!("${} ← {}", rd, result),
+                    )
+                }
+                0x27 => {
+                    // NOR: rd = ~(rs | rt)
+                    let result = !(regs[rs] | regs[rt]);
+                    if rd > 0 {
+                        undo_log.push(UndoEntry::RegWrite { reg: rd, old_value: regs[rd], new_value: result });
+                        regs[rd] = result;
+                    }
+                    undo_log.push(UndoEntry::Pc { old_value: pc, new_value: next_pc });
+                    events.push(TraceEvent::RegWrite);
+                    pipeline_5(
+                        Some(instr),
+                        &format!("Load 0x{:08X} from IMem[PC=0x{:08X}]", instr, pc),
+                        "Decode NOR",
+                        &format!("ALU: ~(${} | ${}) = {}", rs, rt, result),
+                        "NOP",
+                        &format!("${} ← {}", rd, result),
+                    )
+                }
+                0x00 => {
+                    // SLL: rd = rt << shamt
+                    let result = regs[rt].wrapping_shl(shamt);
+                    if rd > 0 {
+                        undo_log.push(UndoEntry::RegWrite { reg: rd, old_value: regs[rd], new_value: result });
+                        regs[rd] = result;
+                    }
+                    undo_log.push(UndoEntry::Pc { old_value: pc, new_value: next_pc });
+                    events.push(TraceEvent::RegWrite);
+                    pipeline_5(
+                        Some(instr),
+                        &format!("Load 0x{:08X} from IMem[PC=0x{:08X}]", instr, pc),
+                        &format!("Decode SLL ${}, ${}, {}", rd, rt, shamt),
+                        &format!("ALU: ${} << {} = {}", rt, shamt, result),
+                        "NOP",
+                        &format!("${} ← {}", rd, result),
+                    )
+                }
+                0x02 => {
+                    // SRL: rd = rt >> shamt (logical)
+                    let result = regs[rt].wrapping_shr(shamt);
+                    if rd > 0 {
+                        undo_log.push(UndoEntry::RegWrite { reg: rd, old_value: regs[rd], new_value: result });
+                        regs[rd] = result;
+                    }
+                    undo_log.push(UndoEntry::Pc { old_value: pc, new_value: next_pc });
+                    events.push(TraceEvent::RegWrite);
+                    pipeline_5(
+                        Some(instr),
+                        &format!("Load 0x{:08X} from IMem[PC=0x{:08X}]", instr, pc),
+                        &format!("Decode SRL ${}, ${}, {}", rd, rt, shamt),
+                        &format!("ALU: ${} >> {} (logical) = {}", rt, shamt, result),
+                        "NOP",
+                        &format!("${} ← {}", rd, result),
+                    )
+                }
+                0x03 => {
+                    // SRA: rd = (rt as i32) >> shamt (arithmetic)
+                    let result = ((regs[rt] as i32).wrapping_shr(shamt)) as u32;
+                    if rd > 0 {
+                        undo_log.push(UndoEntry::RegWrite { reg: rd, old_value: regs[rd], new_value: result });
+                        regs[rd] = result;
+                    }
+                    undo_log.push(UndoEntry::Pc { old_value: pc, new_value: next_pc });
+                    events.push(TraceEvent::RegWrite);
+                    pipeline_5(
+                        Some(instr),
+                        &format!("Load 0x{:08X} from IMem[PC=0x{:08X}]", instr, pc),
+                        &format!("Decode SRA ${}, ${}, {}", rd, rt, shamt),
+                        &format!("ALU: ${} >> {} (arithmetic) = {}", rt, shamt, result),
+                        "NOP",
+                        &format!("${} ← {}", rd, result),
+                    )
+                }
+                0x04 => {
+                    // SLLV: rd = rt << (rs & 0x1F)
+                    let sh = (regs[rs] & 0x1F) as u32;
+                    let result = regs[rt].wrapping_shl(sh);
+                    if rd > 0 {
+                        undo_log.push(UndoEntry::RegWrite { reg: rd, old_value: regs[rd], new_value: result });
+                        regs[rd] = result;
+                    }
+                    undo_log.push(UndoEntry::Pc { old_value: pc, new_value: next_pc });
+                    events.push(TraceEvent::RegWrite);
+                    pipeline_5(
+                        Some(instr),
+                        &format!("Load 0x{:08X} from IMem[PC=0x{:08X}]", instr, pc),
+                        &format!("Decode SLLV ${}, ${}, ${}", rd, rt, rs),
+                        &format!("ALU: ${} << (${} & 0x1F) = {}", rt, rs, result),
+                        "NOP",
+                        &format!("${} ← {}", rd, result),
+                    )
+                }
+                0x06 => {
+                    // SRLV: rd = rt >> (rs & 0x1F) (logical)
+                    let sh = (regs[rs] & 0x1F) as u32;
+                    let result = regs[rt].wrapping_shr(sh);
+                    if rd > 0 {
+                        undo_log.push(UndoEntry::RegWrite { reg: rd, old_value: regs[rd], new_value: result });
+                        regs[rd] = result;
+                    }
+                    undo_log.push(UndoEntry::Pc { old_value: pc, new_value: next_pc });
+                    events.push(TraceEvent::RegWrite);
+                    pipeline_5(
+                        Some(instr),
+                        &format!("Load 0x{:08X} from IMem[PC=0x{:08X}]", instr, pc),
+                        "Decode SRLV",
+                        &format!("ALU: ${} >> (${} & 0x1F) = {}", rt, rs, result),
+                        "NOP",
+                        &format!("${} ← {}", rd, result),
+                    )
+                }
+                0x07 => {
+                    // SRAV: rd = (rt as i32) >> (rs & 0x1F) (arithmetic)
+                    let sh = (regs[rs] & 0x1F) as u32;
+                    let result = ((regs[rt] as i32).wrapping_shr(sh)) as u32;
+                    if rd > 0 {
+                        undo_log.push(UndoEntry::RegWrite { reg: rd, old_value: regs[rd], new_value: result });
+                        regs[rd] = result;
+                    }
+                    undo_log.push(UndoEntry::Pc { old_value: pc, new_value: next_pc });
+                    events.push(TraceEvent::RegWrite);
+                    pipeline_5(
+                        Some(instr),
+                        &format!("Load 0x{:08X} from IMem[PC=0x{:08X}]", instr, pc),
+                        "Decode SRAV",
+                        &format!("ALU: ${} >> (${} & 0x1F) (arith) = {}", rt, rs, result),
+                        "NOP",
+                        &format!("${} ← {}", rd, result),
+                    )
+                }
                 0x08 => {
                     // JR
                     let target = regs[rs];
@@ -350,13 +520,171 @@ impl ArchitecturePlugin for MipsPlugin {
                         "PC updated",
                     )
                 }
+                0x09 => {
+                    // JALR: rd = PC+4, PC = rs
+                    let target = regs[rs];
+                    let link = next_pc;
+                    if rd > 0 {
+                        undo_log.push(UndoEntry::RegWrite { reg: rd, old_value: regs[rd], new_value: link });
+                        regs[rd] = link;
+                    }
+                    undo_log.push(UndoEntry::Pc { old_value: pc, new_value: target });
+                    events.push(TraceEvent::RegWrite);
+                    pipeline_5(
+                        Some(instr),
+                        &format!("Load 0x{:08X} from IMem[PC=0x{:08X}]", instr, pc),
+                        &format!("Decode JALR ${}, ${}", rd, rs),
+                        &format!("${} ← PC+4, PC ← ${} = 0x{:08X}", rd, rs, target),
+                        "NOP",
+                        "PC updated",
+                    )
+                }
+                0x10 => {
+                    // MFHI: rd = HI
+                    let hi = regs.get(32).copied().unwrap_or(0);
+                    if rd > 0 {
+                        undo_log.push(UndoEntry::RegWrite { reg: rd, old_value: regs[rd], new_value: hi });
+                        regs[rd] = hi;
+                    }
+                    undo_log.push(UndoEntry::Pc { old_value: pc, new_value: next_pc });
+                    events.push(TraceEvent::RegWrite);
+                    pipeline_5(
+                        Some(instr),
+                        &format!("Load 0x{:08X} from IMem[PC=0x{:08X}]", instr, pc),
+                        "Decode MFHI",
+                        &format!("${} ← HI = 0x{:08X}", rd, hi),
+                        "NOP",
+                        &format!("${} ← {}", rd, hi),
+                    )
+                }
+                0x12 => {
+                    // MFLO: rd = LO
+                    let lo = regs.get(33).copied().unwrap_or(0);
+                    if rd > 0 {
+                        undo_log.push(UndoEntry::RegWrite { reg: rd, old_value: regs[rd], new_value: lo });
+                        regs[rd] = lo;
+                    }
+                    undo_log.push(UndoEntry::Pc { old_value: pc, new_value: next_pc });
+                    events.push(TraceEvent::RegWrite);
+                    pipeline_5(
+                        Some(instr),
+                        &format!("Load 0x{:08X} from IMem[PC=0x{:08X}]", instr, pc),
+                        "Decode MFLO",
+                        &format!("${} ← LO = 0x{:08X}", rd, lo),
+                        "NOP",
+                        &format!("${} ← {}", rd, lo),
+                    )
+                }
+                0x18 => {
+                    // MULT: (HI, LO) = rs * rt (signed)
+                    let a = regs[rs] as i32;
+                    let b = regs[rt] as i32;
+                    let product = (a as i64).wrapping_mul(b as i64);
+                    let hi = (product >> 32) as u32;
+                    let lo = (product & 0xFFFFFFFF) as u32;
+                    let old_hi = regs.get(32).copied().unwrap_or(0);
+                    let old_lo = regs.get(33).copied().unwrap_or(0);
+                    undo_log.push(UndoEntry::RegWrite { reg: 32, old_value: old_hi, new_value: hi });
+                    undo_log.push(UndoEntry::RegWrite { reg: 33, old_value: old_lo, new_value: lo });
+                    regs[32] = hi;
+                    regs[33] = lo;
+                    undo_log.push(UndoEntry::Pc { old_value: pc, new_value: next_pc });
+                    events.push(TraceEvent::RegWrite);
+                    pipeline_5(
+                        Some(instr),
+                        &format!("Load 0x{:08X} from IMem[PC=0x{:08X}]", instr, pc),
+                        "Decode MULT",
+                        &format!("(HI, LO) ← ${} * ${} (signed)", rs, rt),
+                        "NOP",
+                        "HI, LO updated",
+                    )
+                }
+                0x19 => {
+                    // MULTU: (HI, LO) = rs * rt (unsigned)
+                    let a = regs[rs] as u64;
+                    let b = regs[rt] as u64;
+                    let product = a.wrapping_mul(b);
+                    let hi = (product >> 32) as u32;
+                    let lo = (product & 0xFFFFFFFF) as u32;
+                    let old_hi = regs.get(32).copied().unwrap_or(0);
+                    let old_lo = regs.get(33).copied().unwrap_or(0);
+                    undo_log.push(UndoEntry::RegWrite { reg: 32, old_value: old_hi, new_value: hi });
+                    undo_log.push(UndoEntry::RegWrite { reg: 33, old_value: old_lo, new_value: lo });
+                    regs[32] = hi;
+                    regs[33] = lo;
+                    undo_log.push(UndoEntry::Pc { old_value: pc, new_value: next_pc });
+                    events.push(TraceEvent::RegWrite);
+                    pipeline_5(
+                        Some(instr),
+                        &format!("Load 0x{:08X} from IMem[PC=0x{:08X}]", instr, pc),
+                        "Decode MULTU",
+                        &format!("(HI, LO) ← ${} * ${} (unsigned)", rs, rt),
+                        "NOP",
+                        "HI, LO updated",
+                    )
+                }
+                0x1A => {
+                    // DIV: LO = rs/rt (signed), HI = rs%rt (signed)
+                    let a = regs[rs] as i32;
+                    let b = regs[rt] as i32;
+                    let (lo, hi) = if b == 0 {
+                        (0u32, regs[rs])
+                    } else {
+                        let q = a.wrapping_div(b);
+                        let r = a.wrapping_rem(b);
+                        (q as u32, r as u32)
+                    };
+                    let old_hi = regs.get(32).copied().unwrap_or(0);
+                    let old_lo = regs.get(33).copied().unwrap_or(0);
+                    undo_log.push(UndoEntry::RegWrite { reg: 32, old_value: old_hi, new_value: hi });
+                    undo_log.push(UndoEntry::RegWrite { reg: 33, old_value: old_lo, new_value: lo });
+                    regs[32] = hi;
+                    regs[33] = lo;
+                    undo_log.push(UndoEntry::Pc { old_value: pc, new_value: next_pc });
+                    events.push(TraceEvent::RegWrite);
+                    pipeline_5(
+                        Some(instr),
+                        &format!("Load 0x{:08X} from IMem[PC=0x{:08X}]", instr, pc),
+                        "Decode DIV",
+                        &format!("LO = ${}/${}, HI = ${}%${}", rs, rt, rs, rt),
+                        "NOP",
+                        "HI, LO updated",
+                    )
+                }
+                0x1B => {
+                    // DIVU: LO = rs/rt (unsigned), HI = rs%rt (unsigned)
+                    let a = regs[rs];
+                    let b = regs[rt];
+                    let (lo, hi) = if b == 0 {
+                        (0u32, a)
+                    } else {
+                        (a / b, a % b)
+                    };
+                    let old_hi = regs.get(32).copied().unwrap_or(0);
+                    let old_lo = regs.get(33).copied().unwrap_or(0);
+                    undo_log.push(UndoEntry::RegWrite { reg: 32, old_value: old_hi, new_value: hi });
+                    undo_log.push(UndoEntry::RegWrite { reg: 33, old_value: old_lo, new_value: lo });
+                    regs[32] = hi;
+                    regs[33] = lo;
+                    undo_log.push(UndoEntry::Pc { old_value: pc, new_value: next_pc });
+                    events.push(TraceEvent::RegWrite);
+                    pipeline_5(
+                        Some(instr),
+                        &format!("Load 0x{:08X} from IMem[PC=0x{:08X}]", instr, pc),
+                        "Decode DIVU",
+                        &format!("LO = ${}/${}, HI = ${}%${} (unsigned)", rs, rt, rs, rt),
+                        "NOP",
+                        "HI, LO updated",
+                    )
+                }
                 0x0C => {
                     // SYSCALL: v0=10 exit, v0=1 print_int, v0=11 print_char, v0=5 read_int, v0=8 read_string, v0=12 read_char
                     let v0 = regs[2];
                     let a0 = regs[4];
                     let a1 = regs[5];
                     let (halt, io_out) = match v0 {
-                        10 => (true, None),
+                        10 => (true, None),  // exit
+                        17 => (true, None),  // exit with value in $a0 (SPIM)
                         4 => {
                             // Print string: a0 = address of null-terminated string
                             let mut s = String::new();
@@ -491,6 +819,8 @@ impl ArchitecturePlugin for MipsPlugin {
                     undo_log.push(UndoEntry::Pc { old_value: pc, new_value: next_pc });
                     let action_str = if let Some(ref s) = io_out {
                         format!("syscall: print \"{}\"", s.replace('\n', "\\n"))
+                    } else if v0 == 17 {
+                        format!("syscall 17: exit with value {}", a0)
                     } else {
                         "syscall 10: exit".to_string()
                     };
@@ -571,6 +901,40 @@ impl ArchitecturePlugin for MipsPlugin {
                 &format!("Load 0x{:08X} from IMem[PC=0x{:08X}]", instr, pc),
                 &format!("Decode SLTI ${}, ${}, {}", rt, rs, imm as i32),
                 &format!("ALU: (${} < {}) ? 1 : 0 = {}", rs, imm as i32, result),
+                "NOP",
+                &format!("${} ← {}", rt, result),
+            )
+        } else if opcode == 0x0B {
+            // SLTIU: rt = (rs < imm unsigned) ? 1 : 0 (imm zero-extended)
+            let result = if regs[rs] < imm { 1u32 } else { 0u32 };
+            if rt > 0 {
+                undo_log.push(UndoEntry::RegWrite { reg: rt, old_value: regs[rt], new_value: result });
+                regs[rt] = result;
+            }
+            undo_log.push(UndoEntry::Pc { old_value: pc, new_value: next_pc });
+            events.push(TraceEvent::RegWrite);
+            pipeline_5(
+                Some(instr),
+                &format!("Load 0x{:08X} from IMem[PC=0x{:08X}]", instr, pc),
+                &format!("Decode SLTIU ${}, ${}, {}", rt, rs, imm),
+                &format!("ALU: (${} < {} unsigned) ? 1 : 0 = {}", rs, imm, result),
+                "NOP",
+                &format!("${} ← {}", rt, result),
+            )
+        } else if opcode == 0x0E {
+            // XORI: rt = rs ^ imm (zero-extended)
+            let result = regs[rs] ^ imm;
+            if rt > 0 {
+                undo_log.push(UndoEntry::RegWrite { reg: rt, old_value: regs[rt], new_value: result });
+                regs[rt] = result;
+            }
+            undo_log.push(UndoEntry::Pc { old_value: pc, new_value: next_pc });
+            events.push(TraceEvent::RegWrite);
+            pipeline_5(
+                Some(instr),
+                &format!("Load 0x{:08X} from IMem[PC=0x{:08X}]", instr, pc),
+                &format!("Decode XORI ${}, ${}, 0x{:04X}", rt, rs, imm),
+                &format!("ALU: ${} ^ 0x{:04X} = {}", rs, imm, result),
                 "NOP",
                 &format!("${} ← {}", rt, result),
             )
@@ -944,9 +1308,12 @@ impl ArchitecturePlugin for MipsPlugin {
             "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7",
             "t8", "t9", "k0", "k1", "gp", "sp", "s8", "ra",
         ];
+        let mut reg_names: Vec<String> = (0..32).map(|i| format!("${} ({})", i, names[i])).collect();
+        reg_names.push("HI".to_string());
+        reg_names.push("LO".to_string());
         RegisterSchema {
             pc_name: "PC".to_string(),
-            reg_names: (0..32).map(|i| format!("${} ({})", i, names[i])).collect(),
+            reg_names,
         }
     }
 }
@@ -1015,12 +1382,134 @@ fn parse_mips_instruction(
             let rt = parse_reg(args[2]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[2]) })?;
             encode(encode_r(0x25, rd, rs, rt, 0));
         }
+        "sll" => {
+            if args.len() != 3 {
+                return Err(AssemblerError { line: line_num, column: col, message: "sll rd, rt, shamt".to_string() });
+            }
+            let rd = parse_reg(args[0]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[0]) })?;
+            let rt = parse_reg(args[1]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[1]) })?;
+            let shamt: u32 = args[2].parse().map_err(|_| AssemblerError { line: line_num, column: col, message: format!("Invalid shamt: {}", args[2]) })?;
+            if shamt > 31 {
+                return Err(AssemblerError { line: line_num, column: col, message: "shamt must be 0–31".to_string() });
+            }
+            encode(encode_r(0x00, rd, 0, rt, shamt));
+        }
+        "srl" => {
+            if args.len() != 3 {
+                return Err(AssemblerError { line: line_num, column: col, message: "srl rd, rt, shamt".to_string() });
+            }
+            let rd = parse_reg(args[0]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[0]) })?;
+            let rt = parse_reg(args[1]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[1]) })?;
+            let shamt: u32 = args[2].parse().map_err(|_| AssemblerError { line: line_num, column: col, message: format!("Invalid shamt: {}", args[2]) })?;
+            if shamt > 31 {
+                return Err(AssemblerError { line: line_num, column: col, message: "shamt must be 0–31".to_string() });
+            }
+            encode(encode_r(0x02, rd, 0, rt, shamt));
+        }
+        "sra" => {
+            if args.len() != 3 {
+                return Err(AssemblerError { line: line_num, column: col, message: "sra rd, rt, shamt".to_string() });
+            }
+            let rd = parse_reg(args[0]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[0]) })?;
+            let rt = parse_reg(args[1]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[1]) })?;
+            let shamt: u32 = args[2].parse().map_err(|_| AssemblerError { line: line_num, column: col, message: format!("Invalid shamt: {}", args[2]) })?;
+            if shamt > 31 {
+                return Err(AssemblerError { line: line_num, column: col, message: "shamt must be 0–31".to_string() });
+            }
+            encode(encode_r(0x03, rd, 0, rt, shamt));
+        }
         "jr" => {
             if args.len() != 1 {
                 return Err(AssemblerError { line: line_num, column: col, message: "jr rs".to_string() });
             }
             let rs = parse_reg(args[0]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[0]) })?;
             encode(encode_r(0x08, 0, rs, 0, 0));
+        }
+        "jalr" => {
+            if args.len() < 1 || args.len() > 2 {
+                return Err(AssemblerError { line: line_num, column: col, message: "jalr [rd,] rs".to_string() });
+            }
+            let (rd, rs) = if args.len() == 2 {
+                let rd = parse_reg(args[0]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[0]) })?;
+                let rs = parse_reg(args[1]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[1]) })?;
+                (rd, rs)
+            } else {
+                (31, parse_reg(args[0]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[0]) })?)
+            };
+            encode(encode_r(0x09, rd, rs, 0, 0));
+        }
+        "sllv" => {
+            if args.len() != 3 {
+                return Err(AssemblerError { line: line_num, column: col, message: "sllv rd, rt, rs".to_string() });
+            }
+            let rd = parse_reg(args[0]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[0]) })?;
+            let rt = parse_reg(args[1]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[1]) })?;
+            let rs = parse_reg(args[2]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[2]) })?;
+            encode(encode_r(0x04, rd, rs, rt, 0));
+        }
+        "srlv" => {
+            if args.len() != 3 {
+                return Err(AssemblerError { line: line_num, column: col, message: "srlv rd, rt, rs".to_string() });
+            }
+            let rd = parse_reg(args[0]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[0]) })?;
+            let rt = parse_reg(args[1]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[1]) })?;
+            let rs = parse_reg(args[2]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[2]) })?;
+            encode(encode_r(0x06, rd, rs, rt, 0));
+        }
+        "srav" => {
+            if args.len() != 3 {
+                return Err(AssemblerError { line: line_num, column: col, message: "srav rd, rt, rs".to_string() });
+            }
+            let rd = parse_reg(args[0]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[0]) })?;
+            let rt = parse_reg(args[1]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[1]) })?;
+            let rs = parse_reg(args[2]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[2]) })?;
+            encode(encode_r(0x07, rd, rs, rt, 0));
+        }
+        "mfhi" => {
+            if args.len() != 1 {
+                return Err(AssemblerError { line: line_num, column: col, message: "mfhi rd".to_string() });
+            }
+            let rd = parse_reg(args[0]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[0]) })?;
+            encode(encode_r(0x10, rd, 0, 0, 0));
+        }
+        "mflo" => {
+            if args.len() != 1 {
+                return Err(AssemblerError { line: line_num, column: col, message: "mflo rd".to_string() });
+            }
+            let rd = parse_reg(args[0]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[0]) })?;
+            encode(encode_r(0x12, rd, 0, 0, 0));
+        }
+        "mult" => {
+            if args.len() != 2 {
+                return Err(AssemblerError { line: line_num, column: col, message: "mult rs, rt".to_string() });
+            }
+            let rs = parse_reg(args[0]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[0]) })?;
+            let rt = parse_reg(args[1]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[1]) })?;
+            encode(encode_r(0x18, 0, rs, rt, 0));
+        }
+        "multu" => {
+            if args.len() != 2 {
+                return Err(AssemblerError { line: line_num, column: col, message: "multu rs, rt".to_string() });
+            }
+            let rs = parse_reg(args[0]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[0]) })?;
+            let rt = parse_reg(args[1]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[1]) })?;
+            encode(encode_r(0x19, 0, rs, rt, 0));
+        }
+        "div" => {
+            if args.len() != 2 {
+                return Err(AssemblerError { line: line_num, column: col, message: "div rs, rt".to_string() });
+            }
+            let rs = parse_reg(args[0]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[0]) })?;
+            let rt = parse_reg(args[1]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[1]) })?;
+            encode(encode_r(0x1A, 0, rs, rt, 0));
+        }
+        "divu" => {
+            if args.len() != 2 {
+                return Err(AssemblerError { line: line_num, column: col, message: "divu rs, rt".to_string() });
+            }
+            let rs = parse_reg(args[0]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[0]) })?;
+            let rt = parse_reg(args[1]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[1]) })?;
+            encode(encode_r(0x1B, 0, rs, rt, 0));
         }
         "syscall" => {
             if !args.is_empty() {
@@ -1054,6 +1543,33 @@ fn parse_mips_instruction(
             let rt = parse_reg(args[2]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[2]) })?;
             encode(encode_r(0x2A, rd, rs, rt, 0));
         }
+        "sltu" => {
+            if args.len() != 3 {
+                return Err(AssemblerError { line: line_num, column: col, message: "sltu rd, rs, rt".to_string() });
+            }
+            let rd = parse_reg(args[0]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[0]) })?;
+            let rs = parse_reg(args[1]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[1]) })?;
+            let rt = parse_reg(args[2]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[2]) })?;
+            encode(encode_r(0x2B, rd, rs, rt, 0));
+        }
+        "nor" => {
+            if args.len() != 3 {
+                return Err(AssemblerError { line: line_num, column: col, message: "nor rd, rs, rt".to_string() });
+            }
+            let rd = parse_reg(args[0]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[0]) })?;
+            let rs = parse_reg(args[1]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[1]) })?;
+            let rt = parse_reg(args[2]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[2]) })?;
+            encode(encode_r(0x27, rd, rs, rt, 0));
+        }
+        "xor" => {
+            if args.len() != 3 {
+                return Err(AssemblerError { line: line_num, column: col, message: "xor rd, rs, rt".to_string() });
+            }
+            let rd = parse_reg(args[0]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[0]) })?;
+            let rs = parse_reg(args[1]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[1]) })?;
+            let rt = parse_reg(args[2]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[2]) })?;
+            encode(encode_r(0x26, rd, rs, rt, 0));
+        }
         "slti" => {
             if args.len() != 3 {
                 return Err(AssemblerError { line: line_num, column: col, message: "slti rt, rs, imm".to_string() });
@@ -1062,6 +1578,24 @@ fn parse_mips_instruction(
             let rs = parse_reg(args[1]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[1]) })?;
             let imm: i32 = parse_mips_imm(args[2]).map_err(|_| AssemblerError { line: line_num, column: col, message: format!("Invalid imm: {}", args[2]) })?;
             encode(encode_i(0x0A, rs, rt, imm));
+        }
+        "sltiu" => {
+            if args.len() != 3 {
+                return Err(AssemblerError { line: line_num, column: col, message: "sltiu rt, rs, imm".to_string() });
+            }
+            let rt = parse_reg(args[0]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[0]) })?;
+            let rs = parse_reg(args[1]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[1]) })?;
+            let imm: i32 = parse_mips_imm(args[2]).map_err(|_| AssemblerError { line: line_num, column: col, message: format!("Invalid imm: {}", args[2]) })?;
+            encode(encode_i(0x0B, rs, rt, imm));
+        }
+        "xori" => {
+            if args.len() != 3 {
+                return Err(AssemblerError { line: line_num, column: col, message: "xori rt, rs, imm".to_string() });
+            }
+            let rt = parse_reg(args[0]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[0]) })?;
+            let rs = parse_reg(args[1]).ok_or_else(|| AssemblerError { line: line_num, column: col, message: format!("Invalid reg: {}", args[1]) })?;
+            let imm: i32 = parse_mips_imm(args[2]).map_err(|_| AssemblerError { line: line_num, column: col, message: format!("Invalid imm: {}", args[2]) })?;
+            encode(encode_i(0x0E, rs, rt, imm));
         }
         "lb" => {
             if args.len() != 2 {

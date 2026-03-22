@@ -34,11 +34,23 @@ pub fn arch_config(arch: &str) -> ArchitectureConfig {
             default_memory_size: 64 * 1024,
             default_entry_label: "_start",
         },
+        "8085" => ArchitectureConfig {
+            default_memory_size: 64 * 1024,
+            default_entry_label: "_start",
+        },
+        "6502" => ArchitectureConfig {
+            default_memory_size: 64 * 1024,
+            default_entry_label: "_start",
+        },
+        "8086" => ArchitectureConfig {
+            default_memory_size: 64 * 1024,
+            default_entry_label: "_start",
+        },
         _ => ArchitectureConfig::default(),
     }
 }
 
 /// List of all supported architecture names (for UI, validation)
 pub fn supported_architectures() -> &'static [&'static str] {
-    &["RV32I", "LC3", "MIPS"]
+    &["RV32I", "LC3", "MIPS", "8085", "6502", "8086"]
 }

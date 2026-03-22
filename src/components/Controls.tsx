@@ -34,6 +34,7 @@ export function Controls() {
     <div className="controls">
       <div className="control-row">
         <select
+          data-tour="arch-select"
           value={arch}
           onChange={(e) => handleArchChange(e.target.value)}
           className="arch-select"
@@ -41,12 +42,16 @@ export function Controls() {
           <option value="RV32I">RISC-V RV32I</option>
           <option value="LC3">LC-3</option>
           <option value="MIPS">MIPS</option>
+          <option value="8085">Intel 8085</option>
+          <option value="6502">6502</option>
+          <option value="8086">Intel 8086</option>
         </select>
-        <button onClick={() => assemble()} className="btn btn-primary" title="Assemble">
+        <button data-tour="assemble" onClick={() => assemble()} className="btn btn-primary" title="Assemble">
           Assemble
         </button>
         <div className="icon-controls">
           <button
+            data-tour="run-pause"
             onClick={isRunning ? pause : run}
             disabled={halted}
             className="btn btn-icon"
@@ -55,6 +60,7 @@ export function Controls() {
             {isRunning ? <PauseIcon /> : <PlayIcon />}
           </button>
           <button
+            data-tour="stop"
             onClick={pause}
             className="btn btn-icon"
             title="Stop"
@@ -62,6 +68,7 @@ export function Controls() {
             <StopIcon />
           </button>
           <button
+            data-tour="reset"
             onClick={reset}
             className="btn btn-icon"
             title="Reset"
@@ -69,6 +76,7 @@ export function Controls() {
             <ResetIcon />
           </button>
           <button
+            data-tour="step-forward"
             onClick={stepForward}
             disabled={halted || !snapshot}
             className="btn btn-icon"
@@ -77,6 +85,7 @@ export function Controls() {
             <StepForwardIcon />
           </button>
           <button
+            data-tour="step-back"
             onClick={stepBack}
             disabled={!canStepBack || isRunning}
             className="btn btn-icon"

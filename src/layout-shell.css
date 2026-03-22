@@ -1,0 +1,1893 @@
+/* VS Code–like shell: activity bar + token-driven surfaces (sharp edges) */
+
+.app {
+  background: var(--app-bg);
+  color: var(--app-fg);
+  font-family: var(--font-ui);
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  background: var(--app-surface);
+  border-bottom: 1px solid var(--app-border);
+  backdrop-filter: none;
+  padding: 6px 8px 6px 0;
+  gap: 12px;
+  box-shadow: var(--shadow-soft);
+}
+
+.app-header-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 4px;
+}
+
+.theme-toggle-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--app-border);
+  border-radius: var(--radius-tool);
+  background: var(--app-surface-elevated);
+  color: var(--app-fg);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.theme-toggle-btn-icon:hover {
+  background: var(--app-accent-dim);
+  border-color: var(--app-accent);
+  color: var(--app-accent);
+}
+
+.theme-toggle-ico {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.app-header-left h1 {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.app-logo {
+  border-radius: var(--radius-tool);
+  background: linear-gradient(180deg, var(--app-accent) 0%, color-mix(in srgb, var(--app-accent) 70%, #000) 100%);
+}
+
+.app-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.app-workspace {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.left-column-fill,
+.app-main-area,
+.app-workspace {
+  height: 100%;
+  min-height: 0;
+}
+
+.main-workspace-flex {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  isolation: isolate;
+}
+
+.main-workspace-center {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 0;
+}
+
+/* Bottom dock: stay mounted; collapse with CSS so toggle / I/O open doesn’t flicker or “vanish” */
+.main-workspace-bottom {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-height: 0;
+  min-height: 0;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  border-top: 1px solid transparent;
+  transition:
+    max-height 0.24s ease,
+    opacity 0.2s ease,
+    visibility 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.main-workspace-bottom--open {
+  position: relative;
+  max-height: min(44vh, 420px);
+  min-height: 148px;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  border-top-color: var(--app-border);
+  background: var(--app-bg);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.12);
+  z-index: 40;
+}
+
+/* When bottom panel is collapsed, a strip stays visible so users can reopen it */
+.bottom-panel-reveal {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 28px;
+  padding: 0 12px;
+  border: none;
+  border-top: 1px solid var(--app-border);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--app-surface) 88%, var(--app-bg)) 0%, var(--app-surface-elevated) 100%);
+  color: var(--app-fg-muted);
+  font-size: 0.625rem;
+  font-weight: 600;
+  font-family: var(--font-ui);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.bottom-panel-reveal:hover {
+  background: var(--app-accent-dim);
+  color: var(--app-fg);
+}
+
+.bottom-panel-reveal-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.85;
+}
+
+.bottom-panel-reveal-text {
+  user-select: none;
+}
+
+.app-main-area {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Activity bar (navigator): file actions + tools; icons emphasized */
+.activity-bar {
+  width: 56px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  padding: 8px 5px;
+  background: var(--app-surface-elevated);
+  border-right: 1px solid var(--app-border);
+}
+
+.activity-bar-files {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.activity-bar-divider {
+  height: 1px;
+  margin: 6px 2px 8px;
+  background: var(--app-border-subtle);
+  flex-shrink: 0;
+}
+
+.activity-bar-flyout-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.activity-bar-flyout {
+  min-width: 210px;
+  max-height: min(70vh, 360px);
+  overflow-y: auto;
+  z-index: 6000;
+  background: var(--app-surface-elevated);
+  border: 1px solid var(--app-border);
+  border-radius: var(--radius-tool);
+  box-shadow: var(--shadow-soft);
+  padding: 4px;
+}
+
+.activity-bar-flyout--fixed {
+  position: fixed;
+}
+
+.activity-bar-flyout-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: none;
+  border-radius: var(--radius-tool);
+  background: transparent;
+  color: var(--app-fg);
+  font-size: 0.8125rem;
+  font-family: var(--font-ui);
+  cursor: pointer;
+}
+
+.activity-bar-flyout-item:hover {
+  background: var(--app-accent-dim);
+}
+
+.activity-bar-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 8px 4px;
+  border: none;
+  border-left: 2px solid transparent;
+  background: transparent;
+  color: var(--app-fg-muted);
+  cursor: pointer;
+  font-size: 0.65rem;
+  line-height: 1;
+  border-radius: var(--radius-tool);
+  transition:
+    color var(--duration-fast, 0.15s) var(--ease-standard, ease),
+    background var(--duration-fast, 0.15s) var(--ease-standard, ease),
+    border-color var(--duration-fast, 0.15s) var(--ease-standard, ease),
+    transform 0.1s ease;
+}
+
+.activity-bar-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+html[data-reduced-motion="true"] .activity-bar-btn:active {
+  transform: none;
+}
+
+.activity-bar-btn--icon {
+  padding: 10px 4px;
+  min-height: 50px;
+}
+
+.activity-bar-btn:hover {
+  color: var(--app-fg);
+  background: var(--app-accent-dim);
+}
+
+.activity-bar-btn.is-active {
+  color: var(--app-fg);
+  border-left-color: var(--app-accent);
+  background: var(--app-accent-dim);
+}
+
+.activity-bar-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.activity-bar-icon-wrap--settings {
+  width: 32px;
+  height: 32px;
+}
+
+.activity-bar-svg {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.activity-bar-svg--lg {
+  width: 26px;
+  height: 26px;
+}
+
+.activity-bar-label {
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.activity-bar-spacer {
+  flex: 1;
+  min-height: 8px;
+}
+
+/* Status under header */
+.status-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 6px 64px;
+  font-size: 0.6875rem;
+  border-bottom: 1px solid var(--app-border-subtle);
+  background: var(--app-bg);
+}
+
+.status-strip-file {
+  font-size: 0.6875rem;
+  color: var(--app-fg-muted);
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 4px;
+  padding-right: 10px;
+  border-right: 1px solid var(--app-border-subtle);
+}
+
+.status-strip-muted {
+  color: var(--app-fg-dim);
+}
+
+.status-chip {
+  padding: 2px 8px;
+  border: 1px solid var(--app-border);
+  background: var(--app-surface);
+  border-radius: var(--radius-tool);
+  color: var(--app-fg-muted);
+}
+
+.status-chip strong {
+  color: var(--app-fg);
+  font-weight: 600;
+}
+
+.status-chip--mono {
+  font-family: var(--font-mono);
+}
+
+.status-chip--state {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.625rem;
+}
+
+.status-chip--halt {
+  border-color: color-mix(in srgb, var(--app-fg-muted) 50%, transparent);
+  background: var(--app-highlight-error);
+  color: var(--app-fg);
+}
+
+.status-chip--io {
+  border-color: color-mix(in srgb, #b8860b 60%, var(--app-border));
+  background: var(--app-highlight-io);
+  color: var(--app-fg);
+  font-weight: 600;
+}
+
+.status-chip--out {
+  border-color: var(--app-accent);
+  background: var(--app-accent-dim);
+  color: var(--app-fg);
+}
+
+.state-idle {
+  opacity: 0.9;
+}
+.state-running {
+  color: var(--app-accent);
+  border-color: var(--app-accent);
+}
+.state-halted {
+  color: var(--app-fg-dim);
+}
+.state-error {
+  border-color: #f14c4c;
+  background: var(--app-highlight-error);
+}
+
+/* Bottom dock */
+.bottom-dock {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  background: transparent;
+  overflow: auto;
+}
+
+.bottom-dock .runtime-console {
+  flex-shrink: 0;
+}
+
+.bottom-dock .clock-panel,
+.bottom-dock .app-footer {
+  flex-shrink: 0;
+  border-top: 1px solid var(--app-border-subtle);
+  margin: 0;
+}
+
+.app-footer {
+  background: var(--app-surface);
+  border-top: 1px solid var(--app-border);
+}
+
+/* Panels: sharp tool chrome */
+.panel {
+  border-radius: var(--radius-tool);
+  margin: 4px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  backdrop-filter: none;
+}
+
+.panel-header {
+  background: var(--app-surface-elevated);
+  border-bottom: 1px solid var(--app-border);
+}
+
+.panel-header h3 {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--app-fg-muted);
+}
+
+.btn {
+  border-radius: var(--radius-tool);
+  border: 1px solid var(--app-border);
+  background: var(--app-surface-elevated);
+  color: var(--app-fg);
+  transition:
+    background var(--duration-fast, 0.15s) var(--ease-standard, ease),
+    border-color var(--duration-fast, 0.15s) var(--ease-standard, ease),
+    color var(--duration-fast, 0.15s) var(--ease-standard, ease),
+    box-shadow var(--duration-fast, 0.15s) ease;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--app-accent-dim);
+  border-color: var(--app-accent);
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+html[data-reduced-motion="true"] .btn:active:not(:disabled) {
+  transform: none;
+}
+
+.btn-primary {
+  background: var(--app-accent);
+  border-color: var(--app-accent);
+  color: #fff;
+}
+
+[data-theme="light"] .btn-primary {
+  color: #fff;
+}
+
+/* Memory grid (not a table) */
+.memory-hex.memory-grid {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  padding: 0;
+}
+
+.memory-grid-head {
+  display: grid;
+  grid-template-columns: 88px repeat(16, minmax(1.5rem, 1fr));
+  gap: 0;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--app-surface-elevated);
+  border-bottom: 1px solid var(--app-border);
+  color: var(--app-fg-dim);
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.memory-grid-head .mem-h-addr {
+  padding: 6px 8px;
+  border-right: 1px solid var(--app-border-subtle);
+}
+
+.memory-grid-head .mem-h-byte {
+  padding: 6px 2px;
+  text-align: center;
+  border-right: 1px solid var(--app-border-subtle);
+}
+
+.memory-grid-head .mem-h-byte:last-child {
+  border-right: none;
+}
+
+.memory-row.memory-grid-row {
+  display: grid;
+  grid-template-columns: 88px repeat(16, minmax(1.5rem, 1fr));
+  margin: 0;
+  border-bottom: 1px solid var(--app-border-subtle);
+  align-items: stretch;
+}
+
+.memory-row.memory-grid-row:nth-child(even) {
+  background: color-mix(in srgb, var(--app-surface-elevated) 40%, transparent);
+}
+
+.memory-row.memory-grid-row.memory-row--pc {
+  background: var(--app-highlight-pc);
+  outline: 1px solid var(--app-accent);
+  outline-offset: -1px;
+}
+
+.mem-addr {
+  padding: 2px 8px;
+  border-right: 1px solid var(--app-border);
+  color: var(--app-fg-muted);
+  user-select: none;
+  display: flex;
+  align-items: center;
+}
+
+.mem-byte {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 0;
+  border-right: 1px solid var(--app-border-subtle);
+  color: var(--app-fg-dim);
+}
+
+.mem-byte:last-child {
+  border-right: none;
+}
+
+.mem-byte.nonzero {
+  color: var(--app-fg);
+  font-weight: 500;
+}
+
+.mem-byte.mem-byte--pc {
+  background: var(--app-highlight-pc);
+  color: var(--app-fg);
+  font-weight: 700;
+  outline: 1px solid var(--app-accent);
+}
+
+.registers-panel .reg-row.pc-row {
+  background: var(--app-highlight-pc);
+  border-left: 2px solid var(--app-accent);
+}
+
+/* Runtime console — theme tokens (overrides legacy App.css colors) */
+.main-workspace-bottom .runtime-console {
+  flex-shrink: 0;
+  border-top: none;
+  border-left: none;
+  background: var(--app-surface);
+  color: var(--app-fg);
+  max-height: none;
+  font-family: var(--font-mono), monospace;
+}
+
+.bottom-dock .runtime-console--idle {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.runtime-console-placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 14px 16px;
+  background: var(--app-surface);
+  min-height: 72px;
+}
+
+.runtime-console-placeholder-title {
+  margin: 0 0 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--app-fg-muted);
+  font-family: var(--font-ui);
+}
+
+.runtime-console-placeholder-text {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--app-fg-dim);
+  font-family: var(--font-ui);
+}
+
+.runtime-console-placeholder-text strong {
+  color: var(--app-fg-muted);
+  font-weight: 600;
+}
+
+.runtime-console {
+  border-top: none;
+  border-left: 1px solid var(--app-border-subtle);
+}
+
+.runtime-console-header.runtime-console-output {
+  border-left: 3px solid var(--app-accent);
+  background: color-mix(in srgb, var(--app-surface-elevated) 94%, var(--app-accent) 6%);
+  color: var(--app-fg);
+}
+
+.runtime-console-header.runtime-console-input {
+  border-left: 3px solid color-mix(in srgb, #d4a017 70%, var(--app-border));
+  background: var(--app-highlight-io);
+  color: var(--app-fg);
+}
+
+.runtime-console-header.runtime-console-error {
+  border-left: 3px solid #e11d48;
+  background: var(--app-highlight-error);
+  color: var(--app-fg);
+}
+
+.runtime-console-io {
+  color: var(--app-fg);
+}
+
+.runtime-console-hint {
+  color: var(--app-fg-muted);
+}
+
+.runtime-console-message {
+  color: var(--app-fg);
+}
+
+.runtime-console-prompt {
+  color: var(--app-fg);
+}
+
+.runtime-console-input-field {
+  border: 1px solid var(--app-border);
+  background: var(--app-input-bg);
+  color: var(--app-fg);
+}
+
+.runtime-console-input-field:focus {
+  border-color: var(--app-accent);
+  outline: none;
+}
+
+.runtime-console-badge {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: color-mix(in srgb, var(--app-surface-elevated) 70%, var(--app-highlight-io));
+  color: var(--app-fg);
+  border: 1px solid var(--app-border-subtle);
+}
+
+/* Bottom dock: clock strip matches theme (not legacy glass / neon blue) */
+.main-workspace-bottom .app-footer {
+  padding: 10px 14px;
+  background: var(--app-surface-elevated);
+  border-top: 1px solid var(--app-border);
+  backdrop-filter: none;
+}
+
+.main-workspace-bottom .clock-label {
+  color: var(--app-fg-muted);
+  opacity: 1;
+}
+
+.main-workspace-bottom .clock-value {
+  color: var(--app-fg);
+}
+
+.main-workspace-bottom .clock-graph-trigger {
+  border: 1px solid var(--app-border);
+  background: var(--app-surface);
+  color: var(--app-fg);
+}
+
+.main-workspace-bottom .clock-graph-trigger:hover {
+  background: var(--app-accent-dim);
+  border-color: var(--app-accent);
+  color: var(--app-accent);
+}
+
+.main-workspace-bottom .clock-value.state-running {
+  color: color-mix(in srgb, #22c55e 85%, var(--app-fg));
+}
+
+.main-workspace-bottom .clock-value.state-halted,
+.main-workspace-bottom .clock-value.state-error {
+  color: #f87171;
+}
+
+.main-workspace-bottom .clock-value.state-idle,
+.main-workspace-bottom .clock-value.state-paused {
+  color: var(--app-fg-muted);
+}
+
+.main-workspace-bottom .btn-send {
+  background: var(--app-accent);
+  border-color: var(--app-accent);
+  color: #fff;
+}
+
+.main-workspace-bottom .btn-send:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+/* react-split-pane v3 */
+.app-workspace {
+  --split-pane-divider-color: var(--app-border-subtle);
+  --split-pane-divider-color-hover: color-mix(in srgb, var(--app-accent) 55%, var(--app-border));
+  --split-pane-focus-color: var(--app-accent);
+}
+
+.split-pane-divider:hover {
+  background-color: var(--split-pane-divider-color-hover) !important;
+}
+
+/* Sidebar: one navigator for Registers / Memory / Trace */
+.sidebar-unified {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--app-surface);
+  border-radius: var(--radius-tool);
+  border: 1px solid var(--app-border-subtle);
+  overflow: hidden;
+  box-shadow: var(--shadow-soft);
+  container-type: inline-size;
+  container-name: sidebar;
+}
+
+.sidebar-unified-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 6px 8px 0;
+  background: var(--app-surface-elevated);
+  border-bottom: 1px solid var(--app-border-subtle);
+}
+
+.sidebar-unified-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: var(--radius-tool) var(--radius-tool) 0 0;
+  padding: 6px 12px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--app-fg-muted);
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.sidebar-unified-tab-ico {
+  width: 1.2rem;
+  height: 1.2rem;
+  flex-shrink: 0;
+  opacity: 0.92;
+}
+
+.sidebar-unified-tab.is-active .sidebar-unified-tab-ico {
+  color: var(--app-accent);
+  opacity: 1;
+}
+
+@container sidebar (max-width: 220px) {
+  .sidebar-unified-tab-text {
+    display: none;
+  }
+
+  .sidebar-unified-tab {
+    justify-content: center;
+    padding: 8px 10px;
+  }
+
+  .sidebar-unified-tab-ico {
+    width: 1.45rem;
+    height: 1.45rem;
+  }
+}
+
+.sidebar-unified-tab:hover {
+  color: var(--app-fg);
+  background: color-mix(in srgb, var(--app-accent-dim) 55%, transparent);
+}
+
+.sidebar-unified-tab.is-active {
+  color: var(--app-fg);
+  background: var(--app-surface);
+  border-color: var(--app-border);
+  border-bottom-color: var(--app-surface);
+  margin-bottom: -1px;
+}
+
+.sidebar-unified-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-unified-body .panel {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  flex: 1;
+  min-height: 0;
+}
+
+.sidebar-unified-empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--app-fg-muted);
+  font-size: 0.8125rem;
+}
+
+/* Editor: VS Code–style tab strip */
+.editor-panel.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  margin: 4px;
+  overflow: hidden;
+}
+
+.editor-tab-strip {
+  flex-shrink: 0;
+  background: var(--app-surface-elevated);
+  border-bottom: 1px solid var(--app-border-subtle);
+}
+
+.editor-tab-list {
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+  min-height: 34px;
+  padding: 4px 4px 0 6px;
+  overflow-x: auto;
+}
+
+.editor-tab {
+  display: inline-flex;
+  align-items: center;
+  max-width: 200px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: var(--radius-tool) var(--radius-tool) 0 0;
+  background: transparent;
+  color: var(--app-fg-muted);
+  margin-right: 2px;
+}
+
+.editor-tab.is-active {
+  background: var(--app-surface);
+  border-color: var(--app-border);
+  border-bottom-color: var(--app-surface);
+  color: var(--app-fg);
+  margin-bottom: -1px;
+  z-index: 1;
+}
+
+.editor-tab-label {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px 7px 10px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 0.75rem;
+  font-family: var(--font-ui);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-tab-close {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  margin: 0 4px 4px 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-tool);
+  background: transparent;
+  color: var(--app-fg-muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: background 0.12s ease, color 0.12s ease, opacity 0.12s ease;
+}
+
+.editor-tab:hover .editor-tab-close,
+.editor-tab-close:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--app-fg) 8%, transparent);
+  color: var(--app-fg);
+}
+
+.editor-tab-add {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  margin: 0 4px 4px 2px;
+  border: 1px dashed var(--app-border);
+  border-radius: var(--radius-tool);
+  background: transparent;
+  color: var(--app-fg-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.editor-tab-add:hover {
+  border-color: var(--app-accent);
+  color: var(--app-accent);
+  background: var(--app-accent-dim);
+}
+
+.editor-container {
+  flex: 1;
+  min-height: 0;
+}
+
+.activity-bar-btn-settings {
+  margin-top: 2px;
+}
+
+/* —— VS Code–style Settings (full overlay) —— */
+.vscode-settings-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 24px 16px;
+  background: rgba(10, 12, 18, 0.58);
+  backdrop-filter: blur(5px);
+  animation: vscode-settings-fade 0.18s ease-out;
+}
+
+[data-theme="light"] .vscode-settings-overlay {
+  background: rgba(32, 36, 46, 0.42);
+}
+
+@keyframes vscode-settings-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.vscode-settings {
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 auto;
+  min-height: 0;
+  width: min(920px, 100%);
+  max-height: min(88vh, 900px);
+  margin: auto;
+  align-self: center;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--radius-soft);
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+}
+
+.vscode-settings-topbar {
+  display: grid;
+  grid-template-columns: 1fr minmax(200px, 1.2fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px 12px 20px;
+  border-bottom: 1px solid var(--app-border-subtle);
+  background: var(--app-surface-elevated);
+  flex-shrink: 0;
+}
+
+.vscode-settings-title-block {
+  min-width: 0;
+}
+
+.vscode-settings-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--app-fg);
+  letter-spacing: -0.02em;
+}
+
+.vscode-settings-subtitle {
+  margin: 2px 0 0;
+  font-size: 0.75rem;
+  color: var(--app-fg-muted);
+}
+
+.vscode-settings-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.vscode-settings-search-icon {
+  position: absolute;
+  left: 10px;
+  display: flex;
+  color: var(--app-fg-dim);
+  pointer-events: none;
+}
+
+.vscode-settings-search {
+  width: 100%;
+  padding: 8px 12px 8px 34px;
+  font-size: 0.8125rem;
+  border: 1px solid var(--app-border);
+  border-radius: var(--radius-tool);
+  background: var(--app-input-bg);
+  color: var(--app-fg);
+  outline: none;
+}
+
+.vscode-settings-search:focus {
+  border-color: var(--app-accent);
+  box-shadow: 0 0 0 2px var(--app-accent-dim);
+}
+
+.vscode-settings-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-tool);
+  background: transparent;
+  color: var(--app-fg-muted);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.vscode-settings-close:hover {
+  background: color-mix(in srgb, var(--app-fg) 8%, transparent);
+  color: var(--app-fg);
+}
+
+.vscode-settings-body {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.vscode-settings-nav {
+  width: 220px;
+  flex-shrink: 0;
+  padding: 12px 8px;
+  border-right: 1px solid var(--app-border-subtle);
+  background: color-mix(in srgb, var(--app-surface-elevated) 50%, var(--app-surface));
+  overflow-y: auto;
+}
+
+.vscode-settings-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 2px;
+  border: none;
+  border-radius: var(--radius-tool);
+  border-left: 3px solid transparent;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.vscode-settings-nav-item:hover {
+  background: color-mix(in srgb, var(--app-fg) 5%, transparent);
+}
+
+.vscode-settings-nav-item.is-active {
+  background: color-mix(in srgb, var(--app-accent) 12%, var(--app-surface));
+  border-left-color: var(--app-accent);
+}
+
+.vscode-settings-nav-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--app-fg);
+}
+
+.vscode-settings-nav-desc {
+  font-size: 0.6875rem;
+  color: var(--app-fg-muted);
+  line-height: 1.3;
+}
+
+.vscode-settings-main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 20px 28px 32px;
+  background: var(--app-surface);
+}
+
+.vscode-settings-pane-title {
+  margin: 0 0 16px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--app-fg);
+  letter-spacing: -0.02em;
+}
+
+.vscode-settings-subheading {
+  margin: 20px 0 8px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--app-fg-muted);
+}
+
+.vscode-settings-intro {
+  margin: 0 0 20px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--app-fg-muted);
+  max-width: 52ch;
+}
+
+.vscode-settings-intro strong {
+  color: var(--app-fg);
+}
+
+.vscode-settings-divider {
+  height: 1px;
+  margin: 20px 0;
+  background: var(--app-border-subtle);
+}
+
+.vscode-settings-sample-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vscode-setting-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(200px, 1fr);
+  gap: 24px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--app-border-subtle);
+}
+
+.vscode-setting-row:last-child {
+  border-bottom: none;
+}
+
+@media (max-width: 720px) {
+  .vscode-settings-topbar {
+    grid-template-columns: 1fr;
+  }
+
+  .vscode-settings-body {
+    flex-direction: column;
+  }
+
+  .vscode-settings-nav {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    border-right: none;
+    border-bottom: 1px solid var(--app-border-subtle);
+  }
+
+  .vscode-setting-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.vscode-setting-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.vscode-setting-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--app-fg);
+}
+
+.vscode-setting-desc {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--app-fg-muted);
+}
+
+.vscode-setting-control {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.vscode-setting-control--stack {
+  gap: 10px;
+}
+
+.vscode-setting-value {
+  font-size: 0.8125rem;
+  font-family: var(--font-mono);
+  color: var(--app-fg-muted);
+}
+
+.vscode-settings-slider {
+  width: 100%;
+  max-width: 280px;
+  accent-color: var(--app-accent);
+}
+
+.vscode-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  color: var(--app-fg);
+  cursor: pointer;
+}
+
+.vscode-checkbox input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--app-accent);
+}
+
+.vscode-setting-inline-num {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8125rem;
+  color: var(--app-fg-muted);
+}
+
+.vscode-setting-inline-num input[type="number"] {
+  width: 120px;
+  padding: 6px 8px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--radius-tool);
+  background: var(--app-input-bg);
+  color: var(--app-fg);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+
+.vscode-select {
+  min-width: min(280px, 100%);
+  max-width: 100%;
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  font-family: var(--font-ui);
+  border: 1px solid var(--app-border);
+  border-radius: var(--radius-tool);
+  background: var(--app-input-bg);
+  color: var(--app-fg);
+  cursor: pointer;
+  transition: border-color var(--duration-fast, 0.15s) ease, box-shadow var(--duration-fast, 0.15s) ease;
+}
+
+.vscode-select:hover {
+  border-color: var(--app-border-subtle);
+}
+
+.vscode-select:focus {
+  outline: none;
+  border-color: var(--app-accent);
+  box-shadow: 0 0 0 2px var(--app-accent-dim);
+}
+
+/* Comfortable (default) vs compact density */
+html[data-ui-density="compact"] .activity-bar {
+  width: 50px;
+  padding: 4px 3px;
+  gap: 1px;
+}
+
+html[data-ui-density="compact"] .activity-bar-btn--icon {
+  min-height: 44px;
+  padding: 8px 2px;
+}
+
+html[data-ui-density="compact"] .status-strip {
+  padding: 3px 10px 4px 52px;
+  gap: 6px;
+}
+
+html[data-ui-density="compact"] .app-header {
+  padding: 4px 8px 4px 0;
+}
+
+html[data-ui-density="compact"] .panel {
+  margin: 2px;
+}
+
+html[data-ui-density="compact"] .editor-tab-list {
+  min-height: 30px;
+  padding: 2px 2px 0 4px;
+}
+
+html[data-ui-density="compact"] .vscode-settings-main {
+  padding: 14px 20px 24px;
+}
+
+/* —— Cycle Timing Graph (VS Code–style bottom drawer, theme tokens) —— */
+.cycle-graph-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 11500;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+  background: var(--cycle-graph-overlay);
+  backdrop-filter: blur(4px);
+  animation: cycle-graph-overlay-in 0.2s ease-out;
+}
+
+@keyframes cycle-graph-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.cycle-graph-popup {
+  width: 100%;
+  max-width: 100%;
+  height: min(72vh, 820px);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-bottom: none;
+  border-radius: var(--radius-soft) var(--radius-soft) 0 0;
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.25);
+  animation: cycle-graph-drawer-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-theme="light"] .cycle-graph-popup {
+  box-shadow: 0 -8px 32px rgba(22, 28, 40, 0.14);
+}
+
+@keyframes cycle-graph-drawer-in {
+  from {
+    transform: translateY(100%);
+    opacity: 0.96;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.cycle-graph-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 20px;
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid var(--app-border-subtle);
+  background: var(--app-surface-elevated);
+  flex-shrink: 0;
+}
+
+.cycle-graph-title-block {
+  min-width: 0;
+  flex: 1;
+}
+
+.cycle-graph-title {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--app-fg);
+  letter-spacing: -0.02em;
+  font-family: var(--font-ui);
+}
+
+.cycle-graph-subtitle {
+  margin: 4px 0 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--app-fg-muted);
+  max-width: 42rem;
+}
+
+.cycle-graph-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.cycle-clock-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cycle-clock-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--app-fg-muted);
+}
+
+.cycle-clock-input {
+  width: 76px;
+  padding: 6px 10px;
+  font-size: 0.8125rem;
+  font-family: var(--font-mono);
+  border-radius: var(--radius-tool);
+  border: 1px solid var(--app-border);
+  background: var(--app-input-bg);
+  color: var(--app-fg);
+}
+
+.cycle-clock-input:focus {
+  outline: none;
+  border-color: var(--app-accent);
+  box-shadow: 0 0 0 2px var(--app-accent-dim);
+}
+
+.cycle-graph-clear-sel {
+  font-size: 0.75rem;
+}
+
+.cycle-graph-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-tool);
+  background: transparent;
+  color: var(--app-fg-muted);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.cycle-graph-close:hover {
+  background: color-mix(in srgb, var(--app-fg) 8%, transparent);
+  color: var(--app-fg);
+}
+
+.cycle-graph-body {
+  padding: 16px 18px 18px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--app-bg);
+}
+
+.cycle-graph-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px 24px;
+  min-height: 200px;
+}
+
+.cycle-graph-empty-icon {
+  color: var(--app-fg-dim);
+  margin-bottom: 16px;
+  opacity: 0.85;
+}
+
+.cycle-graph-empty-title {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--app-fg);
+}
+
+.cycle-graph-empty-text {
+  margin: 0;
+  max-width: 400px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--app-fg-muted);
+}
+
+.cycle-graph-empty-text strong {
+  color: var(--app-fg);
+  font-weight: 600;
+}
+
+.cycle-wave-container {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+}
+
+.cycle-graph-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  margin-bottom: 8px;
+}
+
+.cycle-graph-meta-chip {
+  font-size: 0.75rem;
+  color: var(--app-fg-muted);
+  padding: 6px 10px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--radius-tool);
+}
+
+.cycle-graph-meta-chip strong {
+  color: var(--app-fg);
+  font-weight: 600;
+}
+
+.cycle-graph-meta-sep {
+  margin: 0 6px;
+  opacity: 0.5;
+}
+
+.cycle-wave-toolbar {
+  margin-bottom: 10px;
+}
+
+.cycle-graph-hint-inline {
+  font-size: 0.6875rem;
+  color: var(--app-fg-dim);
+}
+
+.cycle-wave-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  min-height: 60px;
+  flex-shrink: 0;
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--radius-tool);
+  background: var(--app-surface);
+}
+
+.cycle-wave-svg {
+  display: block;
+}
+
+.cycle-wave-pulse {
+  stroke: var(--cycle-wave-stroke);
+  fill: none;
+}
+
+.cycle-wave-pulse--selected {
+  stroke: var(--cycle-wave-selected);
+}
+
+.cycle-wave-svg .cycle-label {
+  fill: var(--app-fg-muted);
+  font-size: 10px;
+  font-family: var(--font-mono), monospace;
+}
+
+.cycle-wave-svg .cycle-label.selected {
+  fill: var(--cycle-wave-selected);
+  font-weight: 600;
+}
+
+.cycle-table-wrap {
+  margin-top: 14px;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  width: 100%;
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--radius-tool);
+  background: var(--app-surface);
+}
+
+.cycle-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+  font-family: var(--font-mono), monospace;
+}
+
+.cycle-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  text-align: left;
+  padding: 10px 12px;
+  background: var(--app-surface-elevated);
+  color: var(--app-fg-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.625rem;
+  border-bottom: 1px solid var(--app-border);
+  white-space: nowrap;
+}
+
+.cycle-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--app-border-subtle);
+  vertical-align: top;
+  color: var(--app-fg);
+}
+
+.cycle-table tbody tr {
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.cycle-table tbody tr:hover {
+  background: var(--app-accent-dim);
+}
+
+.cycle-table tbody tr.selected {
+  background: color-mix(in srgb, var(--cycle-wave-selected) 22%, var(--app-surface));
+}
+
+.cycle-table-cycle {
+  font-size: 0.75rem;
+  color: var(--app-fg);
+  background: color-mix(in srgb, var(--app-fg-muted) 12%, transparent);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.cycle-table .instr-mnemonic {
+  color: var(--app-accent);
+  font-weight: 600;
+}
+
+.cycle-table .cycle-action-cell {
+  color: var(--app-fg-muted);
+  max-width: min(320px, 40vw);
+  word-wrap: break-word;
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+}
+
+.cycle-table-time {
+  color: var(--app-fg-dim);
+  white-space: nowrap;
+}
+
+.cycle-table .stage-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: var(--radius-tool);
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--app-border-subtle);
+}
+
+.cycle-table .stage-badge.stage-fetch {
+  background: color-mix(in srgb, #6366f1 28%, var(--app-surface-elevated));
+  color: var(--app-fg);
+}
+
+.cycle-table .stage-badge.stage-decode {
+  background: color-mix(in srgb, #22c55e 28%, var(--app-surface-elevated));
+  color: var(--app-fg);
+}
+
+.cycle-table .stage-badge.stage-execute {
+  background: color-mix(in srgb, #eab308 28%, var(--app-surface-elevated));
+  color: var(--app-fg);
+}
+
+.cycle-table .stage-badge.stage-memory {
+  background: color-mix(in srgb, #ec4899 26%, var(--app-surface-elevated));
+  color: var(--app-fg);
+}
+
+.cycle-table .stage-badge.stage-write-back {
+  background: color-mix(in srgb, var(--app-accent) 30%, var(--app-surface-elevated));
+  color: var(--app-fg);
+}
+
+.cycle-table .stage-badge.stage-halted {
+  background: color-mix(in srgb, #ef4444 28%, var(--app-surface-elevated));
+  color: var(--app-fg);
+}
+
+.cycle-graph-footer-hint {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--app-border-subtle);
+  font-size: 0.6875rem;
+  line-height: 1.45;
+  color: var(--app-fg-dim);
+  flex-shrink: 0;
+}
+
+/* —— Light mode readability: diagram SVG + panels (fixes “invisible” schematic) —— */
+[data-theme="light"] .panel {
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
+}
+
+[data-theme="light"] .status-strip {
+  background: var(--app-surface);
+  border-bottom: 1px solid var(--app-border);
+}
+
+[data-theme="light"] .status-chip {
+  border-color: var(--app-border-subtle);
+  background: var(--app-surface-elevated);
+  color: var(--app-fg-muted);
+}
+
+[data-theme="light"] .activity-bar {
+  border-right-color: var(--app-border);
+  background: var(--app-surface);
+}
+
+/* App.css diagram uses white/light strokes — override for light UI */
+[data-theme="light"] .diagram-block {
+  fill: var(--diagram-block-fill);
+  stroke: var(--diagram-block-stroke);
+  stroke-width: 1.25;
+}
+
+[data-theme="light"] .diagram-block.active {
+  fill: var(--diagram-block-active-fill);
+  stroke: var(--diagram-block-active-stroke);
+  stroke-width: 1.5;
+}
+
+[data-theme="light"] .diagram-conn {
+  stroke: var(--diagram-conn);
+  stroke-width: 2;
+  opacity: 1;
+}
+
+[data-theme="light"] .diagram-conn.active {
+  stroke: var(--diagram-conn-active);
+  stroke-width: 2.75;
+}
+
+[data-theme="light"] .diagram-block-title {
+  fill: var(--diagram-text-title);
+}
+
+[data-theme="light"] .diagram-block-inner {
+  fill: var(--diagram-text-inner);
+}
+
+[data-theme="light"] .diagram-hint {
+  opacity: 1;
+  color: var(--app-fg-muted);
+}
+
+[data-theme="light"] .arch-expanded-overlay {
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(6px);
+}
+
+[data-theme="light"] .arch-expanded-content {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  color: var(--app-fg);
+  box-shadow: var(--shadow-soft);
+}
+
+[data-theme="light"] .arch-expanded-header h3 {
+  color: var(--app-fg);
+}
+
+[data-theme="light"] .arch-expanded-svg {
+  background: var(--app-surface-elevated);
+  border: 1px solid var(--app-border-subtle);
+}
+
+[data-theme="light"] .arch-zoom-value {
+  color: var(--app-fg-muted);
+}
+
+[data-theme="light"] .arch-expanded-hint {
+  color: var(--app-fg-muted);
+}
+
+[data-theme="light"] .trace-badges {
+  background: var(--app-surface-elevated);
+  border-top: 1px solid var(--app-border-subtle);
+}
+
+[data-theme="light"] .trace-badge {
+  background: var(--app-accent-dim);
+  color: var(--app-fg);
+  border: 1px solid var(--app-border-subtle);
+}

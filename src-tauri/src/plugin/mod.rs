@@ -1,10 +1,16 @@
 //! Architecture plugin system - defines the trait and schemas for extensible architectures.
 
 pub mod adapter;
+pub mod i6502;
+pub mod i8085;
+pub mod i8086;
 pub mod lc3;
 pub mod mips;
 pub mod rv32i;
 
+pub use i6502::I6502Plugin;
+pub use i8085::I8085Plugin;
+pub use i8086::I8086Plugin;
 pub use lc3::Lc3Plugin;
 pub use mips::MipsPlugin;
 pub use rv32i::Rv32iPlugin;

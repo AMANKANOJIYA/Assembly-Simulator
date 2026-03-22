@@ -3,10 +3,7 @@ import MonacoEditor from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
 import type * as Monaco from "monaco-editor";
 import { useStore } from "../store";
-
-interface EditorPanelProps {
-  onAssemble?: () => void;
-}
+import { MONO_FONT_STACKS } from "../appearance";
 
 function pcToLine(sourceMap: { pc: number; line: number }[] | undefined, pc: number): number | null {
   if (!sourceMap) return null;
@@ -20,12 +17,21 @@ function lineToPc(sourceMap: { pc: number; line: number }[] | undefined, line: n
   return entry ? entry.pc : null;
 }
 
-export function EditorPanel(_props: EditorPanelProps) {
-  const source = useStore((s) => s.source);
+export function EditorPanel() {
+  const activeEditorTabId = useStore((s) => s.activeEditorTabId);
+  const source = useStore((s) => s.tabBuffers[s.activeEditorTabId] ?? "");
+  const editorTabs = useStore((s) => s.editorTabs);
   const setSource = useStore((s) => s.setSource);
+  const addEditorTab = useStore((s) => s.addEditorTab);
+  const closeEditorTab = useStore((s) => s.closeEditorTab);
+  const setActiveEditorTab = useStore((s) => s.setActiveEditorTab);
+
   const errors = useStore((s) => s.errors);
   const snapshot = useStore((s) => s.snapshot);
   const breakpoints = useStore((s) => s.breakpoints);
+  const themeMode = useStore((s) => s.themeMode);
+  const monoFontFamily = useStore((s) => s.monoFontFamily);
+  const editorFontSize = useStore((s) => s.editorFontSize);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof Monaco | null>(null);
   const decorationsRef = useRef<string[]>([]);
@@ -36,6 +42,17 @@ export function EditorPanel(_props: EditorPanelProps) {
     () => (currentPc != null ? pcToLine(sourceMap, currentPc) : null),
     [currentPc, sourceMap]
   );
+
+  const monoStack = useMemo(() => MONO_FONT_STACKS[monoFontFamily], [monoFontFamily]);
+
+  useEffect(() => {
+    const ed = editorRef.current;
+    if (!ed) return;
+    ed.updateOptions({
+      fontSize: editorFontSize,
+      fontFamily: monoStack,
+    });
+  }, [editorFontSize, monoStack]);
 
   useEffect(() => {
     const ed = editorRef.current;
@@ -103,13 +120,49 @@ export function EditorPanel(_props: EditorPanelProps) {
   }, [currentLine]);
 
   return (
-    <div className="panel editor-panel">
-      <div className="panel-header">
-        <h3>Code</h3>
+    <div className="panel editor-panel" data-tour="editor">
+      <div className="editor-tab-strip">
+        <div className="editor-tab-list" role="tablist">
+          {editorTabs.map((tab) => (
+            <div
+              key={tab.id}
+              className={`editor-tab${tab.id === activeEditorTabId ? " is-active" : ""}`}
+              role="tab"
+              aria-selected={tab.id === activeEditorTabId}
+            >
+              <button
+                type="button"
+                className="editor-tab-label"
+                onClick={() => setActiveEditorTab(tab.id)}
+                title={tab.filePath ?? tab.title}
+              >
+                {tab.title}
+              </button>
+              {editorTabs.length > 1 && (
+                <button
+                  type="button"
+                  className="editor-tab-close"
+                  aria-label={`Close ${tab.title}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    closeEditorTab(tab.id);
+                  }}
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          ))}
+          <button type="button" className="editor-tab-add" onClick={() => addEditorTab()} title="New editor tab">
+            +
+          </button>
+        </div>
       </div>
       <div className="editor-container">
         <MonacoEditor
+          key={activeEditorTabId}
           height="100%"
+          theme={themeMode === "dark" ? "vs-dark" : "vs"}
           defaultLanguage="asm"
           value={source}
           onChange={(v) => setSource(v ?? "")}
@@ -118,7 +171,7 @@ export function EditorPanel(_props: EditorPanelProps) {
             monacoRef.current = monaco;
             editor.onMouseDown((e) => {
               const target = e.target;
-              const GUTTER_GLYPH = 6; // MouseTargetType.GUTTER_GLYPH_MARGIN
+              const GUTTER_GLYPH = 6;
               if (target.type === GUTTER_GLYPH && target.position) {
                 const line = target.position.lineNumber;
                 const sm = useStore.getState().snapshot?.source_map ?? [];
@@ -129,12 +182,15 @@ export function EditorPanel(_props: EditorPanelProps) {
           }}
           options={{
             minimap: { enabled: false },
-            fontSize: 13,
-            fontFamily: "JetBrains Mono, Fira Code, monospace",
+            fontSize: editorFontSize,
+            fontFamily: monoStack,
             lineNumbers: "on",
             glyphMargin: true,
             scrollBeyondLastLine: false,
             wordWrap: "on",
+            smoothScrolling: true,
+            cursorBlinking: "smooth",
+            padding: { top: 8, bottom: 12 },
           }}
         />
       </div>

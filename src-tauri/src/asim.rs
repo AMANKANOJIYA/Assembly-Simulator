@@ -2,6 +2,7 @@
 //! Extensible for future architectures: LC-3, MIPS, 8085, 6502, 8086, ARM, x86.
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AsimFile {
@@ -18,6 +19,8 @@ pub struct AsimFile {
     pub speed: u32,
     #[serde(default)]
     pub max_cycle_limit: Option<u64>,
+    #[serde(default)]
+    pub panel_visibility: Option<HashMap<String, bool>>,
 }
 
 fn default_memory_size() -> usize {
@@ -32,7 +35,7 @@ impl AsimFile {
     pub const VERSION: u32 = 1;
     pub const EXTENSION: &'static str = "asim";
 
-    pub fn new(arch: &str, source: String, memory_size: usize, breakpoints: Vec<u32>, speed: u32, max_cycle_limit: Option<u64>) -> Self {
+    pub fn new(arch: &str, source: String, memory_size: usize, breakpoints: Vec<u32>, speed: u32, max_cycle_limit: Option<u64>, panel_visibility: Option<HashMap<String, bool>>) -> Self {
         Self {
             version: Self::VERSION,
             arch: arch.to_string(),
@@ -42,6 +45,7 @@ impl AsimFile {
             entry_point: Some("_start".to_string()),
             speed,
             max_cycle_limit,
+            panel_visibility,
         }
     }
 }

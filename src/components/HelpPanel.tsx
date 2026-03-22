@@ -1,10 +1,11 @@
 import { useStore } from "../store";
 import { invoke } from "@tauri-apps/api/core";
-import { SAMPLE_LC3_FULL, SAMPLE_MIPS_FULL, SAMPLE_FULL } from "../samples";
+import { getDefaultSample } from "../samples";
 
 export function HelpPanel() {
   const helpOpen = useStore((s) => s.helpOpen);
   const setHelpOpen = useStore((s) => s.setHelpOpen);
+  const setOnboardingOpen = useStore((s) => (s as any).setOnboardingOpen as (v: boolean) => void);
   const setToast = useStore((s) => s.setToast);
   const arch = useStore((s) => s.arch);
 
@@ -16,7 +17,7 @@ export function HelpPanel() {
     }
   };
 
-  const sampleCode = arch === "LC3" ? SAMPLE_LC3_FULL : arch === "MIPS" ? SAMPLE_MIPS_FULL : SAMPLE_FULL;
+  const sampleCode = getDefaultSample(arch);
 
   const regsDesc =
     arch === "LC3"
@@ -41,13 +42,25 @@ export function HelpPanel() {
       >
         <div className="help-header">
           <h2>Help — Assembly Simulator</h2>
-          <button
-            type="button"
-            className="btn btn-small"
-            onClick={() => setHelpOpen(false)}
-          >
-            Close
-          </button>
+          <div className="settings-samples">
+            <button
+              type="button"
+              className="btn btn-small"
+              onClick={() => {
+                setHelpOpen(false);
+                setOnboardingOpen(true);
+              }}
+            >
+              Start Tutorial
+            </button>
+            <button
+              type="button"
+              className="btn btn-small"
+              onClick={() => setHelpOpen(false)}
+            >
+              Close
+            </button>
+          </div>
         </div>
         <div className="help-body">
           <section>

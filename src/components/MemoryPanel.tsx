@@ -31,7 +31,11 @@ export function MemoryPanel() {
 
   const memory = snapshot?.memory ?? [];
   const size = snapshot?.memory_size ?? memorySize;
+  const pc = snapshot?.state.pc;
   const useChunkView = size > CHUNK_VIEW_THRESHOLD;
+
+  const rowContainsPc = (rowAddr: number, byteCount: number) =>
+    pc != null && pc >= rowAddr && pc < rowAddr + byteCount;
 
   const handleMemorySizeChange = async (newSize: number) => {
     if (newSize < 4096 || newSize > 16 * 1024 * 1024) return;
@@ -100,7 +104,7 @@ export function MemoryPanel() {
   };
 
   return (
-    <div className="panel memory-panel">
+    <div className="panel memory-panel" data-tour="memory">
       <div className="panel-header">
         <h3>Memory</h3>
         <div className="memory-toolbar">
@@ -121,12 +125,12 @@ export function MemoryPanel() {
             onKeyDown={(e) => e.key === "Enter" && handleJump()}
             className="jump-input"
           />
-          <button onClick={handleJump} className="btn btn-small">
+          <button data-tour="memory-jump" onClick={handleJump} className="btn btn-small">
             Jump
           </button>
         </div>
       </div>
-      <div ref={scrollContainerRef} className="memory-hex">
+      <div ref={scrollContainerRef} className="memory-hex memory-grid">
         {useChunkView && expandedChunk === null ? (
           <div className="memory-chunk-list">
             <p className="memory-chunk-hint">
@@ -166,32 +170,62 @@ export function MemoryPanel() {
                 {chunks[expandedChunk]?.end.toString(16).padStart(8, "0")}
               </span>
             </div>
-            {rows.map(({ addr, bytes }) => (
-              <div key={addr} className="memory-row" data-addr={addr}>
-                <span className="mem-addr">0x{addr.toString(16).padStart(8, "0")}</span>
-                <span className="mem-bytes">
-                  {bytes.map((b, i) => (
-                    <span key={i} className={`mem-byte${b !== 0 ? " nonzero" : ""}`}>
-                      {b.toString(16).padStart(2, "0")}
-                    </span>
-                  ))}
+            <div className="memory-grid-head" aria-hidden>
+              <span className="mem-h-addr">Address</span>
+              {Array.from({ length: BYTES_PER_ROW }, (_, i) => (
+                <span key={i} className="mem-h-byte">
+                  +{i.toString(16).toUpperCase()}
                 </span>
+              ))}
+            </div>
+            {rows.map(({ addr, bytes }) => (
+              <div
+                key={addr}
+                className={`memory-row memory-grid-row${rowContainsPc(addr, bytes.length) ? " memory-row--pc" : ""}`}
+                data-addr={addr}
+              >
+                <span className="mem-addr">0x{addr.toString(16).padStart(8, "0")}</span>
+                {bytes.map((b, i) => (
+                  <span
+                    key={i}
+                    className={`mem-byte${b !== 0 ? " nonzero" : ""}${pc === addr + i ? " mem-byte--pc" : ""}`}
+                  >
+                    {b.toString(16).padStart(2, "0")}
+                  </span>
+                ))}
               </div>
             ))}
           </>
         ) : (
-          rows.map(({ addr, bytes }) => (
-            <div key={addr} className="memory-row" data-addr={addr}>
-              <span className="mem-addr">0x{addr.toString(16).padStart(8, "0")}</span>
-              <span className="mem-bytes">
+          <>
+            {rows.length > 0 && (
+              <div className="memory-grid-head" aria-hidden>
+                <span className="mem-h-addr">Address</span>
+                {Array.from({ length: BYTES_PER_ROW }, (_, i) => (
+                  <span key={i} className="mem-h-byte">
+                    +{i.toString(16).toUpperCase()}
+                  </span>
+                ))}
+              </div>
+            )}
+            {rows.map(({ addr, bytes }) => (
+              <div
+                key={addr}
+                className={`memory-row memory-grid-row${rowContainsPc(addr, bytes.length) ? " memory-row--pc" : ""}`}
+                data-addr={addr}
+              >
+                <span className="mem-addr">0x{addr.toString(16).padStart(8, "0")}</span>
                 {bytes.map((b, i) => (
-                  <span key={i} className={`mem-byte${b !== 0 ? " nonzero" : ""}`}>
+                  <span
+                    key={i}
+                    className={`mem-byte${b !== 0 ? " nonzero" : ""}${pc === addr + i ? " mem-byte--pc" : ""}`}
+                  >
                     {b.toString(16).padStart(2, "0")}
                   </span>
                 ))}
-              </span>
-            </div>
-          ))
+              </div>
+            ))}
+          </>
         )}
       </div>
 

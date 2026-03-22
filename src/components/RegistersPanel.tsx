@@ -1,7 +1,7 @@
 import { useStore } from "../store";
 
 function formatHex(value: number, digits: number): string {
-  const mask = digits === 4 ? 0xFFFF : 0xFFFFFFFF;
+  const mask = digits === 2 ? 0xFF : digits === 4 ? 0xFFFF : 0xFFFFFFFF;
   return "0x" + (value & mask).toString(16).padStart(digits, "0").toUpperCase();
 }
 
@@ -33,7 +33,7 @@ export function RegistersPanel() {
 
   if (!snapshot) {
     return (
-      <div className="panel registers-panel">
+      <div className="panel registers-panel" data-tour="registers">
         <div className="panel-header">
           <h3>Registers</h3>
         </div>
@@ -44,7 +44,8 @@ export function RegistersPanel() {
 
   const { state } = snapshot;
   const isLC3 = arch === "LC3";
-  const hexDigits = isLC3 ? 4 : 8;
+  const is16bit = arch === "8086" || arch === "8085" || arch === "6502" || isLC3;
+  const hexDigits = is16bit ? 4 : 8;
 
   // LC-3: always render PC + R0-R7 + PSR explicitly (bypass schema)
   if (isLC3) {
@@ -54,7 +55,7 @@ export function RegistersPanel() {
     const psrStr = `N=${(psr >> 2) & 1} Z=${(psr >> 1) & 1} P=${psr & 1}`;
 
     return (
-      <div className="panel registers-panel">
+      <div className="panel registers-panel" data-tour="registers">
         <div className="panel-header">
           <h3>Registers</h3>
         </div>
@@ -72,7 +73,7 @@ export function RegistersPanel() {
   // RV32I, MIPS: use schema
   if (!registerSchema) {
     return (
-      <div className="panel registers-panel">
+      <div className="panel registers-panel" data-tour="registers">
         <div className="panel-header">
           <h3>Registers</h3>
         </div>

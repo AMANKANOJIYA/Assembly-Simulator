@@ -39,66 +39,37 @@
 
 ## 🖼️ Screenshots
 
-### Main Interface
-<!-- Add screenshot: screenshots/main_window.png -->
-**Main Interface** - The application window showing the code editor, architecture diagram, registers panel, memory viewer, and trace panel.
+When you add PNG files to the `screenshots/` folder (see `screenshots/README.md`), they will appear below.
 
-*Screenshot description: Full application window with:*
-- *Left: Monaco code editor with LC-3 assembly code*
-- *Center-top: Architecture diagram showing pipeline stages (PC → Fetch → Decode → ALU → Memory → RegFile)*
-- *Center-bottom: Registers panel showing R0-R7 and PSR*
-- *Right-top: Memory hex dump viewer*
-- *Right-bottom: Trace panel showing execution events*
+### Main Interface
+![Main Interface](screenshots/main_window.png)
+
+*Full application window: code editor, architecture diagram, registers, memory viewer, trace panel.*
 
 ### Architecture Diagram
-<!-- Add screenshot: screenshots/architecture_diagram.png -->
-**Architecture Diagram** - Visual representation of the CPU pipeline with active stage highlighting.
+![Architecture Diagram](screenshots/architecture_diagram.png)
 
-*Screenshot description: Close-up of the architecture diagram showing:*
-- *PC block highlighted in blue*
-- *Fetch stage active (yellow highlight)*
-- *Data flow arrows between stages*
-- *Register file and ALU blocks*
+*CPU pipeline with active stage highlighting (PC, Fetch, Decode, ALU, Memory, RegFile).*
 
 ### Step-by-Step Execution
-<!-- Add screenshot: screenshots/step_execution.png -->
-**Step-by-Step Execution** - Stepping through code with register and memory updates visible.
+![Step-by-Step Execution](screenshots/step_execution.png)
 
-*Screenshot description: Application during step execution showing:*
-- *Code editor with current instruction highlighted*
-- *Registers panel showing updated values (R1 = 10, R2 = 20)*
-- *Trace panel showing "FETCH", "DECODE", "ALU", "REG_WRITE" events*
-- *Pipeline stages showing which stage is active*
+*Stepping through code with register and memory updates and trace events.*
 
 ### Breakpoint Debugging
-<!-- Add screenshot: screenshots/breakpoints.png -->
-**Breakpoint Debugging** - Setting breakpoints and pausing execution.
+![Breakpoint Debugging](screenshots/breakpoints.png)
 
-*Screenshot description: Code editor with:*
-- *Red breakpoint markers in the gutter*
-- *Execution paused at breakpoint*
-- *Toast notification: "Breakpoint hit"*
-- *All panels showing state at breakpoint*
+*Breakpoint markers in the gutter and execution paused at breakpoint.*
 
 ### I/O Interaction
-<!-- Add screenshot: screenshots/io_input.png -->
-**I/O Interaction** - Runtime console showing input request and output.
+![I/O Interaction](screenshots/io_input.png)
 
-*Screenshot description: Runtime Console panel showing:*
-- *"Trap/Interrupt Input" section*
-- *Input field for entering character*
-- *"Send to Program" button*
-- *Program Output section showing previously printed text*
+*Runtime Console: Trap/Input section, Program Output, Send to Program.*
 
 ### Multi-Architecture Comparison
-<!-- Add screenshot: screenshots/multi_arch.png -->
-**Multi-Architecture Comparison** - Switching between RISC-V, LC-3, and MIPS.
+![Multi-Architecture](screenshots/multi_arch.png)
 
-*Screenshot description: Architecture selector dropdown showing:*
-- *RV32I selected*
-- *LC-3 option*
-- *MIPS option*
-- *Different register names visible (x0-x31 vs R0-R7 vs $zero-$ra)*
+*Architecture selector: RV32I, LC-3, MIPS with architecture-specific register names.*
 
 ---
 
@@ -136,15 +107,17 @@ The built application will be in `src-tauri/target/release/bundle/macos/` (macOS
 
 ## 📚 Supported Architectures
 
-### RISC-V RV32I
+### RISC-V RV32I (full base)
 
-**ALU Instructions**: `addi`, `add`, `sub`, `slt`, `sltu`, `slti`, `sltiu`, `xor`, `xori`, `or`, `ori`, `and`, `andi`, `sll`, `srl`, `sra`, `slli`, `srli`, `srai`, `lui`
+**ALU / Immediate**: `lui`, `auipc`, `addi`, `slti`, `sltiu`, `xori`, `ori`, `andi`, `slli`, `srli`, `srai`, `add`, `sub`, `slt`, `sltu`, `xor`, `or`, `and`, `sll`, `srl`, `sra`
 
-**Memory Instructions**: `lb`, `lh`, `lw`, `lbu`, `lhu`, `sb`, `sh`, `sw`
+**Memory**: `lb`, `lh`, `lw`, `lbu`, `lhu`, `sb`, `sh`, `sw`
 
-**Branch Instructions**: `beq`, `bne`, `blt`, `bge`, `bltu`, `bgeu`
+**Branch**: `beq`, `bne`, `blt`, `bge`, `bltu`, `bgeu`
 
-**Jump Instructions**: `jal`, `jalr`, `j`, `ret`, `mv`, `li`, `nop`
+**Jump**: `jal`, `jalr`; pseudo: `j`, `ret`, `mv`, `li`, `nop`
+
+**System**: `ecall`, `ebreak` (breakpoint/halt)
 
 **System Calls** (via `ecall`, register `a7`):
 - `4` = Print string (a0 = address)
@@ -154,6 +127,7 @@ The built application will be in `src-tauri/target/release/bundle/macos/` (macOS
 - `11` = Print integer (a0)
 - `12` = Print character (a0)
 - `13` = Read character → a0
+- `93` = Exit with code (a0)
 
 **Example**:
 ```asm
@@ -176,6 +150,7 @@ _start:
 - `x21` = PUTS (print string at R0)
 - `x22` = IN (read char → R0, with echo)
 - `x23` = GETC (read char → R0, no echo)
+- `x24` = PUTSP (print string, word = two bytes low-first, stop at 0x0000)
 - `x25` = HALT
 
 **Example**:
@@ -188,9 +163,9 @@ _start:
 .END
 ```
 
-### MIPS
+### MIPS (full base)
 
-**Instructions**: `add`, `sub`, `and`, `or`, `addi`, `lw`, `sw`, `beq`, `bne`, `j`, `jal`, `jr`, `syscall`, `li`, `nop`
+**Instructions**: `add`, `sub`, `and`, `or`, `nor`, `xor`, `sll`, `srl`, `sra`, `sllv`, `srlv`, `srav`, `slt`, `sltu`, `slti`, `sltiu`, `addi`, `xori`, `lb`, `lh`, `lw`, `sb`, `sh`, `sw`, `beq`, `bne`, `j`, `jal`, `jr`, `jalr`, `mult`, `multu`, `div`, `divu`, `mfhi`, `mflo`, `syscall`, `li`, `lui`, `nop`. Special registers **HI** and **LO** (multiply/divide results).
 
 **System Calls** (via `syscall`, register `$v0`):
 - `1` = Print integer ($a0)
@@ -200,6 +175,7 @@ _start:
 - `10` = Exit
 - `11` = Print character ($a0)
 - `12` = Read character → $v0
+- `17` = Exit with value ($a0)
 
 **Example**:
 ```asm
