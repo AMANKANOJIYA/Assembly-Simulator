@@ -10,8 +10,8 @@ Security updates are applied to the **default branch** (e.g. `main`) and include
 
 Instead:
 
-1. **Email or private channel** — If the repository lists a maintainer contact or security policy in the GitHub “Security” tab, use that.
-2. **GitHub Security Advisories** — If enabled for this repository, use **Security → Report a vulnerability** so the maintainers can coordinate a fix privately.
+1. **GitHub (preferred when enabled)** — On the repository page, open the **Security** tab and use **Report a vulnerability**. Maintainers should enable **private vulnerability reporting** under **Settings → Security → Code security** so reports stay non-public. See [GitHub: Privately reporting a security vulnerability](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing/privately-reporting-a-security-vulnerability).
+2. **Maintainer contact** — If GitHub reporting is unavailable, contact the maintainers through a channel they publish on their GitHub profile or org (do not post exploit details in public issues).
 
 Include:
 

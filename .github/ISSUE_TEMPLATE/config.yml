@@ -1,1 +1,8 @@
 blank_issues_enabled: true
+contact_links:
+  - name: Security policy
+    url: https://github.com/AMANKANOJIYA/simulator/blob/main/SECURITY.md
+    about: Do not file security issues publicly — follow this policy (enable private reporting under repo Settings → Security).
+  - name: Contributing guide
+    url: https://github.com/AMANKANOJIYA/simulator/blob/main/CONTRIBUTING.md
+    about: Branch naming, issue-first workflow, and pull request process.

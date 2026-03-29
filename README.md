@@ -269,6 +269,7 @@ Adding a new architecture typically means implementing the plugin trait, registe
 | Document | Purpose |
 |----------|---------|
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to report issues, submit PRs, and code style expectations |
+| [.github/MAINTAINERS.md](.github/MAINTAINERS.md) | GitHub settings checklist for maintainers (Issues, security reporting, merges) |
 | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community standards |
 | [SECURITY.md](SECURITY.md) | How to report security issues privately |
 | [LICENSE](LICENSE) | **MIT License** — free use with attribution |

@@ -38,6 +38,8 @@ Instances of abusive, harassing, or otherwise unacceptable behavior may be repor
 
 Maintainers are obligated to respect the privacy and security of the reporter of any incident.
 
+**How to report:** Open a GitHub issue (or contact the maintainers via GitHub if you need a private channel). For **security vulnerabilities**, do **not** use a public issue; follow [SECURITY.md](SECURITY.md) instead.
+
 ## Attribution
 
 This Code of Conduct is adapted from the [Contributor Covenant](https://www.contributor-covenant.org), version 2.1, available at  

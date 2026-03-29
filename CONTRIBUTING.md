@@ -16,8 +16,32 @@ This project follows the [Contributor Covenant](CODE_OF_CONDUCT.md). By particip
 ## Before you start coding
 
 1. **Search existing issues** to avoid duplicates.
-2. **Discuss large changes** in an issue first (new ISA, major UI refactor).
+2. **Open an issue first** when the change is large or ambiguous (see table below).
 3. **Keep changes focused** — one logical change per pull request when possible.
+
+### When to open an issue before a PR
+
+| Usually **open an issue first** | **PR without a prior issue** is often fine |
+|----------------------------------|---------------------------------------------|
+| New ISA / major simulator behavior | Small bugfixes with clear scope |
+| Large UI or architecture refactors | Typos, docs, obvious one-file fixes |
+| New dependencies or tooling | Test or lint fixes |
+| “Should we do X?” design questions | Narrow changes linked to an existing issue |
+
+Use the issue to agree on direction; then reference it in your PR (`Fixes #123`, `Refs #456`).
+
+### Branch naming
+
+Use short, descriptive branch names from your fork, for example:
+
+| Prefix | Use for |
+|--------|---------|
+| `fix/` | Bug fixes (`fix/memory-scroll`) |
+| `feat/` | New features (`feat/trace-export`) |
+| `docs/` | Documentation only (`docs/readme-typos`) |
+| `chore/` | Tooling, deps, non-user-facing (`chore/eslint`) |
+
+Not required to match exactly, but it helps reviewers scan open PRs.
 
 ## Development setup
 
@@ -86,7 +110,9 @@ Other useful commands:
    - Links to **related issues** (`Fixes #123` when applicable).
    - **Screenshots** or short notes for UI changes.
 
-Maintainers will review as time allows. Feedback may request small changes before merge.
+Maintainers will review as time allows. Feedback may request small changes before merge. Merges may be **squashed** or **rebased** depending on repository settings.
+
+Repository owners: see [.github/MAINTAINERS.md](.github/MAINTAINERS.md) for recommended GitHub settings (Issues, security reporting, merge options).
 
 ## Security
 
