@@ -30,9 +30,12 @@ const R_DI: usize = 5;
 const R_BP: usize = 6;
 const R_SP: usize = 7;
 const R_FLAGS: usize = 8;
+#[allow(dead_code)]
 const R_CS: usize = 9;
+#[allow(dead_code)]
 const R_DS: usize = 10;
 const R_SS: usize = 11;
+#[allow(dead_code)]
 const R_ES: usize = 12;
 
 const FLAG_Z: u32 = 0x40;
@@ -447,10 +450,10 @@ fn parse_8086_instruction(
     line_num: u32,
     col: u32,
     pc: u32,
-    labels: &HashMap<String, u32>,
+    _labels: &HashMap<String, u32>,
     bytes: &mut Vec<u8>,
     source_map: &mut Vec<SourceMapEntry>,
-    errors: &mut Vec<AssemblerError>,
+    _errors: &mut Vec<AssemblerError>,
     pending_refs: &mut Vec<(usize, String, bool)>,
 ) -> Result<(), AssemblerError> {
     let parts: Vec<&str> = line.split_whitespace().collect();

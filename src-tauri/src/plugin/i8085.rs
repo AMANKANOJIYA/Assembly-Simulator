@@ -82,6 +82,7 @@ fn set_flags_sub(flags: &mut u32, a: u8, b: u8, borrow_in: u8, result: u8) {
     }
 }
 
+#[allow(dead_code)]
 fn pack_psw(a: u8, f: u32) -> (u8, u8) {
     let packed =
         (if (f & FLAG_S) != 0 { 0x80 } else { 0 }) |
@@ -93,6 +94,7 @@ fn pack_psw(a: u8, f: u32) -> (u8, u8) {
     (a, packed)
 }
 
+#[allow(dead_code)]
 fn unpack_psw(packed_flags: u8) -> u32 {
     let mut f: u32 = 0;
     if (packed_flags & 0x80) != 0 { f |= FLAG_S; }
@@ -286,7 +288,7 @@ impl ArchitecturePlugin for I8085Plugin {
         }
     }
 
-    fn reset(&self, config: &ResetConfig) -> CpuState {
+    fn reset(&self, _config: &ResetConfig) -> CpuState {
         CpuState {
             pc: 0,
             regs: vec![0u32; 9],
@@ -1336,7 +1338,7 @@ fn parse_8085_instruction(
     labels: &HashMap<String, u32>,
     bytes: &mut Vec<u8>,
     source_map: &mut Vec<SourceMapEntry>,
-    errors: &mut Vec<AssemblerError>,
+    _errors: &mut Vec<AssemblerError>,
     pending_refs: &mut Vec<(usize, String, bool)>,
 ) -> Result<(), AssemblerError> {
     let parts: Vec<&str> = line.split_whitespace().collect();
@@ -1347,7 +1349,7 @@ fn parse_8085_instruction(
     let args_str: String = if parts.len() > 1 { parts[1..].join(" ") } else { String::new() };
     let args: Vec<&str> = args_str.split(',').map(|s| s.trim()).collect();
 
-    let start = bytes.len();
+    let _start = bytes.len();
     source_map.push(SourceMapEntry { pc, line: line_num, column: col });
 
     match mnemonic.as_str() {

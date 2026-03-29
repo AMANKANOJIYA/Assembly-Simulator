@@ -1,5 +1,9 @@
 # Assembly Simulator
 
+<p align="center">
+  <img src="public/logo.png" alt="Assembly Simulator logo" width="320" />
+</p>
+
 **A desktop app for learning computer architecture by writing assembly, assembling, and stepping through execution—with registers, memory, pipeline trace, and an interactive CPU diagram.**
 
 [![Tauri](https://img.shields.io/badge/Tauri-2-24C8D8?logo=tauri)](https://tauri.app/)
@@ -64,11 +68,9 @@
 ### 1. Get the code
 
 ```bash
-git clone https://github.com/<your-org-or-user>/simulator.git
+git clone https://github.com/AMANKANOJIYA/simulator.git
 cd simulator
 ```
-
-Replace the URL with this repository’s real clone URL.
 
 ### 2. Install JavaScript dependencies
 

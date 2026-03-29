@@ -28,11 +28,13 @@ Prerequisites:
 - **Platform**: Tauri targets desktop; macOS is the primary tested platform.
 
 ```bash
-git clone <your-fork-url>
+git clone https://github.com/AMANKANOJIYA/simulator.git
 cd simulator
 npm install
 npm run tauri:dev    # desktop app with hot reload
 ```
+
+Use your fork’s URL if you cloned a fork (e.g. `https://github.com/<your-username>/simulator.git`) instead of the upstream URL above.
 
 Other useful commands:
 

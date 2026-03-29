@@ -1,6 +1,8 @@
 //! Architecture adapter - extensible plugin registry and config for new architectures.
 //! Add a new architecture by: 1) implement ArchitecturePlugin, 2) add to arch_config().
 
+#![allow(dead_code)]
+
 /// Per-architecture configuration
 #[derive(Debug, Clone)]
 pub struct ArchitectureConfig {

@@ -31,6 +31,7 @@ fn default_speed() -> u32 {
     100
 }
 
+#[allow(dead_code)]
 impl AsimFile {
     pub const VERSION: u32 = 1;
     pub const EXTENSION: &'static str = "asim";

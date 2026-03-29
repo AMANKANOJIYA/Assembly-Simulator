@@ -157,7 +157,7 @@ function App() {
         <AppearanceSync />
         <header className="app-header">
           <div className="app-header-left">
-            <div className="app-logo" aria-hidden />
+            <img className="app-logo" src="/logo.png" alt="" decoding="async" />
             <h1>Assembly Simulator</h1>
           </div>
           <Controls />

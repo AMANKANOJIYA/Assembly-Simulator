@@ -41,7 +41,10 @@ export function HelpPanel() {
         aria-label="Help"
       >
         <div className="help-header">
-          <h2>Help — Assembly Simulator</h2>
+          <div className="help-header-brand">
+            <img className="app-logo" src="/logo.png" alt="" decoding="async" />
+            <h2>Help — Assembly Simulator</h2>
+          </div>
           <div className="settings-samples">
             <button
               type="button"

@@ -158,6 +158,7 @@ pub struct UiConnection {
 
 /// Architecture plugin trait - each architecture implements this
 pub trait ArchitecturePlugin: Send + Sync {
+    #[allow(dead_code)]
     fn name(&self) -> &str;
 
     fn assemble(&self, source: &str) -> ProgramImage;

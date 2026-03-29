@@ -362,6 +362,7 @@ export function OnboardingTour() {
       >
         <div className="onboard-header">
           <div className="onboard-header-left">
+            <img className="app-logo" src="/logo.png" alt="" decoding="async" />
             <h2>Tutorial</h2>
             <span className="onboard-step">
               {idx + 1} / {steps.length}

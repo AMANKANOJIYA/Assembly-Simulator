@@ -86,8 +86,13 @@ export function SettingsPanel() {
       >
         <header className="vscode-settings-topbar">
           <div className="vscode-settings-title-block">
-            <h2 className="vscode-settings-title">Settings</h2>
-            <p className="vscode-settings-subtitle">User — Assembly Simulator</p>
+            <div className="vscode-settings-brand">
+              <img className="app-logo" src="/logo.png" alt="" decoding="async" />
+              <div>
+                <h2 className="vscode-settings-title">Settings</h2>
+                <p className="vscode-settings-subtitle">User — Assembly Simulator</p>
+              </div>
+            </div>
           </div>
           <div className="vscode-settings-search-wrap">
             <span className="vscode-settings-search-icon" aria-hidden>

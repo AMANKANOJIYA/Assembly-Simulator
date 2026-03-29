@@ -993,10 +993,10 @@ fn parse_lc3_instruction(
     line_num: u32,
     col: u32,
     pc: u32,
-    labels: &HashMap<String, u32>,
+    _labels: &HashMap<String, u32>,
     bytes: &mut Vec<u8>,
     source_map: &mut Vec<SourceMapEntry>,
-    errors: &mut Vec<AssemblerError>,
+    _errors: &mut Vec<AssemblerError>,
     pending_refs: &mut Vec<(usize, u32, String, u32, u8)>,
 ) -> Result<u32, AssemblerError> {
     let tokens: Vec<&str> = line.split_whitespace().collect();
@@ -1020,7 +1020,7 @@ fn parse_lc3_instruction(
             if args.len() != 1 {
                 return Err(AssemblerError { line: line_num, column: col, message: ".ORIG x3000".to_string() });
             }
-            let val: u32 = if args[0].starts_with("0x") || args[0].starts_with("x") {
+            let _val: u32 = if args[0].starts_with("0x") || args[0].starts_with("x") {
                 u32::from_str_radix(args[0].trim_start_matches('x').trim_start_matches("0x"), 16)
                     .map_err(|_| AssemblerError { line: line_num, column: col, message: format!("Invalid: {}", args[0]) })?
             } else {

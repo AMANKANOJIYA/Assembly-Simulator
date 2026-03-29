@@ -9,15 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Project documentation: main [README](README.md), [Contributing](CONTRIBUTING.md), [Code of Conduct](CODE_OF_CONDUCT.md), [Security](SECURITY.md), and [MIT License](LICENSE).
+### Fixed
 
-<!-- When you tag a release, add a new section, e.g.:
+## [1.0.0] - 2026-03-29
 
-## [1.0.0] - YYYY-MM-DD
+First public release.
 
 ### Added
-- ...
 
-### Fixed
-- ...
--->
+- Multi-ISA simulator (RISC-V RV32I, LC-3, MIPS, Intel 8085, MOS 6502, Intel 8086) with Rust plugins in `src-tauri/src/plugin/`.
+- Desktop shell via Tauri 2: Monaco editor, assemble/run/step (including step back), breakpoints, registers, memory, trace, CPU diagram, runtime I/O, `.asim` project files.
+- Documentation: [README](README.md), [Contributing](CONTRIBUTING.md), [Code of Conduct](CODE_OF_CONDUCT.md), [Security](SECURITY.md), [MIT License](LICENSE).

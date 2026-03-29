@@ -1323,10 +1323,10 @@ fn parse_mips_instruction(
     line_num: u32,
     col: u32,
     pc: u32,
-    labels: &HashMap<String, u32>,
+    _labels: &HashMap<String, u32>,
     bytes: &mut Vec<u8>,
     source_map: &mut Vec<SourceMapEntry>,
-    errors: &mut Vec<AssemblerError>,
+    _errors: &mut Vec<AssemblerError>,
     pending_refs: &mut Vec<(usize, String, u32, u8)>,
 ) -> Result<(), AssemblerError> {
     let tokens: Vec<&str> = line.split_whitespace().collect();

@@ -1,10 +1,10 @@
 [package]
 name = "app"
-version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
-license = ""
-repository = ""
+version = "1.0.0"
+description = "Assembly Simulator — multi-ISA assembly learning environment (Tauri desktop app)."
+authors = ["Assembly Simulator contributors"]
+license = "MIT"
+repository = "https://github.com/AMANKANOJIYA/simulator"
 edition = "2021"
 rust-version = "1.77.2"
 

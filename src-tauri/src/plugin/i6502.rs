@@ -29,9 +29,13 @@ const R_SP: usize = 3;
 const R_P: usize = 4;
 
 const FLAG_N: u32 = 0x80;
+#[allow(dead_code)]
 const FLAG_V: u32 = 0x40;
+#[allow(dead_code)]
 const FLAG_B: u32 = 0x10;
+#[allow(dead_code)]
 const FLAG_D: u32 = 0x08;
+#[allow(dead_code)]
 const FLAG_I: u32 = 0x04;
 const FLAG_Z: u32 = 0x02;
 const FLAG_C: u32 = 0x01;
@@ -41,6 +45,7 @@ fn set_nz(regs: &mut [u32], val: u8) {
     regs[R_P] = p | (if (val as i8) < 0 { FLAG_N } else { 0 }) | (if val == 0 { FLAG_Z } else { 0 });
 }
 
+#[allow(dead_code)]
 fn set_c(regs: &mut [u32], c: bool) {
     if c {
         regs[R_P] |= FLAG_C;
@@ -678,7 +683,7 @@ fn parse_6502_instruction(
     labels: &HashMap<String, u32>,
     bytes: &mut Vec<u8>,
     source_map: &mut Vec<SourceMapEntry>,
-    errors: &mut Vec<AssemblerError>,
+    _errors: &mut Vec<AssemblerError>,
     pending_refs: &mut Vec<(usize, String, bool)>,
 ) -> Result<(), AssemblerError> {
     let parts: Vec<&str> = line.split_whitespace().collect();
@@ -688,7 +693,7 @@ fn parse_6502_instruction(
     let mnemonic = parts[0].to_uppercase();
     let arg = if parts.len() > 1 { parts[1].trim() } else { "" };
 
-    let start = bytes.len();
+    let _start = bytes.len();
     source_map.push(SourceMapEntry { pc, line: line_num, column: col });
 
     match mnemonic.as_str() {
@@ -880,7 +885,7 @@ fn resolve_6502_addr(
     is_16bit: bool,
 ) -> Result<(), AssemblerError> {
     let s = s.trim().trim_start_matches('$');
-    if let Ok(v) = u16::from_str_radix(s, 16) {
+    if let Ok(_v) = u16::from_str_radix(s, 16) {
         return Ok(());
     }
     if labels.contains_key(s) {

@@ -211,7 +211,7 @@ impl ArchitecturePlugin for Rv32iPlugin {
         }
     }
 
-    fn reset(&self, config: &ResetConfig) -> CpuState {
+    fn reset(&self, _config: &ResetConfig) -> CpuState {
         CpuState {
             pc: 0,
             regs: vec![0u32; 32],
@@ -281,8 +281,8 @@ impl ArchitecturePlugin for Rv32iPlugin {
         };
         let imm_u = instr & 0xFFFFF000;
         let imm_j = {
-            let imm = (instr >> 12) & 0xFFFFF;
-            let sign = (instr >> 31) & 1;
+            let _imm = (instr >> 12) & 0xFFFFF;
+            let _sign = (instr >> 31) & 1;
             let i20 = (instr >> 31) & 1;
             let i10_1 = (instr >> 21) & 0x3FF;
             let i11 = (instr >> 20) & 1;
@@ -1108,10 +1108,10 @@ fn parse_instruction(
     line_num: u32,
     col: u32,
     pc: u32,
-    labels: &HashMap<String, u32>,
+    _labels: &HashMap<String, u32>,
     bytes: &mut Vec<u8>,
     source_map: &mut Vec<SourceMapEntry>,
-    errors: &mut Vec<AssemblerError>,
+    _errors: &mut Vec<AssemblerError>,
     pending_refs: &mut Vec<(usize, String, u32)>,
 ) -> Result<(), AssemblerError> {
     let tokens: Vec<&str> = line.split_whitespace().collect();

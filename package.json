@@ -1,7 +1,12 @@
 {
   "name": "simulator",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Desktop assembly simulator for learning computer architecture (Tauri + React).",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AMANKANOJIYA/simulator.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,7 +15,8 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "icons": "tauri icon public/logo-square.png"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",

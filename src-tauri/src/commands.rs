@@ -44,7 +44,7 @@ pub fn reset(arch: String, config: ResetConfig) -> Result<CpuState, String> {
 #[tauri::command]
 pub fn reset_with_program(source: String, arch: String, memory_size: usize) -> Result<CpuState, String> {
     let mut sim = SIM.lock().map_err(|e| e.to_string())?;
-    let image = sim.assemble(&source, &arch)?;
+    let _image = sim.assemble(&source, &arch)?;
     sim.arch = arch;
     let config = ResetConfig { memory_size };
     Ok(sim.reset(&config))

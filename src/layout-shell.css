@@ -61,7 +61,6 @@
 
 .app-logo {
   border-radius: var(--radius-tool);
-  background: linear-gradient(180deg, var(--app-accent) 0%, color-mix(in srgb, var(--app-accent) 70%, #000) 100%);
 }
 
 .app-body {
@@ -1050,6 +1049,13 @@ html[data-reduced-motion="true"] .btn:active:not(:disabled) {
 }
 
 .vscode-settings-title-block {
+  min-width: 0;
+}
+
+.vscode-settings-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   min-width: 0;
 }
 
