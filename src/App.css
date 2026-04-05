@@ -1358,6 +1358,11 @@
   color: var(--app-fg-muted);
 }
 
+.clock-value--dim {
+  color: var(--app-fg-muted);
+  font-weight: 500;
+}
+
 /* Cycle graph: see layout-shell.css (theme tokens) */
 
 /* Runtime console — bottom dock theme in layout-shell.css */

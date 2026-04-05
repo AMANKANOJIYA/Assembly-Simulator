@@ -68,6 +68,12 @@
   --cycle-wave-selected: var(--vscode-charts-orange);
   --cycle-graph-overlay: color-mix(in srgb, var(--vscode-editor-background) 58%, #000000 42%);
 
+  /* Gantt pipeline chart */
+  --gantt-row-even: rgba(255, 255, 255, 0.03);
+  --gantt-row-odd:  rgba(0, 0, 0, 0.06);
+  --gantt-grid:     rgba(255, 255, 255, 0.08);
+  --gantt-axis-text: rgba(200, 210, 230, 0.55);
+
   /* Diagram — wires & labels (theme-native, not Tailwind blue) */
   --diagram-block-fill: color-mix(in srgb, var(--vscode-sideBar-background) 94%, var(--vscode-focusBorder) 6%);
   --diagram-block-stroke: color-mix(in srgb, var(--vscode-widget-border) 82%, var(--vscode-descriptionForeground) 18%);
@@ -141,6 +147,12 @@
   --cycle-wave-stroke: var(--vscode-focusBorder);
   --cycle-wave-selected: #b45309;
   --cycle-graph-overlay: rgba(15, 23, 42, 0.45);
+
+  /* Gantt pipeline chart */
+  --gantt-row-even: rgba(0, 0, 0, 0.025);
+  --gantt-row-odd:  rgba(0, 0, 0, 0.06);
+  --gantt-grid:     rgba(0, 0, 0, 0.10);
+  --gantt-axis-text: #475569;
 
   --diagram-block-fill: #f8fafc;
   --diagram-block-stroke: #64748b;

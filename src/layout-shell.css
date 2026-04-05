@@ -2029,3 +2029,412 @@ html[data-ui-density="compact"] .vscode-settings-main {
   color: var(--app-fg);
   border: 1px solid var(--app-border-subtle);
 }
+
+/* ── Gantt Pipeline Chart ──────────────────────────────────────────────────── */
+
+/* Stats bar */
+.gantt-stats-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 28px;
+  padding: 10px 0 12px;
+  border-bottom: 1px solid var(--app-border-subtle);
+  flex-shrink: 0;
+}
+
+.gantt-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gantt-stat-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--app-fg-dim);
+}
+
+.gantt-stat-value {
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-family: var(--font-mono), monospace;
+  color: var(--app-fg);
+}
+
+/* Stage breakdown bar */
+.gantt-stage-bar-wrap {
+  display: flex;
+  flex: 1;
+  min-width: 120px;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--app-border-subtle);
+  align-self: center;
+  margin-left: 8px;
+}
+
+.gantt-stage-bar-seg {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+/* Stage filter row */
+.gantt-filter-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  padding: 10px 0 8px;
+  flex-shrink: 0;
+}
+
+.gantt-filter-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--app-fg-dim);
+  margin-right: 4px;
+}
+
+.gantt-filter-btn {
+  font-size: 0.75rem;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1.5px solid var(--app-border);
+  background: transparent;
+  color: var(--app-fg-muted);
+  cursor: pointer;
+  transition: opacity 0.15s, background 0.15s;
+  font-weight: 600;
+}
+
+.gantt-filter-btn--off {
+  opacity: 0.35;
+  border-color: var(--app-border-subtle) !important;
+  color: var(--app-fg-dim) !important;
+}
+
+.gantt-filter-btn:hover {
+  opacity: 1;
+  background: var(--app-surface-elevated);
+}
+
+.gantt-truncated-note {
+  margin-left: auto;
+  font-size: 0.72rem;
+  color: var(--vscode-charts-orange);
+  font-style: italic;
+}
+
+/* Gantt chart wrapper */
+.gantt-wrap {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--radius-tool);
+  background: var(--app-surface);
+}
+
+/* Sticky stage label column */
+.gantt-label-col {
+  position: relative;
+  flex-shrink: 0;
+  width: 80px;
+  background: var(--app-surface-elevated);
+  border-right: 1px solid var(--app-border-subtle);
+  overflow: hidden;
+  z-index: 2;
+}
+
+.gantt-stage-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.gantt-axis-spacer {
+  /* Keeps label column aligned with SVG axis area */
+}
+
+/* Scrollable chart area */
+.gantt-scroll {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-scrollbar) transparent;
+}
+
+.gantt-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+.gantt-scroll::-webkit-scrollbar-thumb {
+  background: var(--app-scrollbar);
+  border-radius: 3px;
+}
+
+.gantt-svg {
+  display: block;
+}
+
+/* Zoom hint strip */
+.gantt-zoom-hint {
+  position: absolute;
+  bottom: 4px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.7rem;
+  color: var(--app-fg-dim);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.gantt-zoom-val {
+  font-weight: 600;
+  font-family: var(--font-mono), monospace;
+}
+
+.gantt-zoom-btn {
+  pointer-events: all;
+  font-size: 0.7rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--app-border-subtle);
+  background: var(--app-surface-elevated);
+  color: var(--app-fg-muted);
+  cursor: pointer;
+}
+
+.gantt-zoom-btn:hover {
+  background: var(--app-surface);
+  color: var(--app-fg);
+}
+
+/* Tooltip */
+.gantt-tooltip {
+  position: fixed;
+  z-index: 20000;
+  background: var(--app-surface-elevated);
+  border: 1px solid var(--app-border);
+  border-radius: var(--radius-tool);
+  padding: 8px 10px;
+  min-width: 160px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+  font-size: 0.775rem;
+}
+
+.gantt-tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.gantt-tooltip-row:last-child {
+  margin-bottom: 0;
+}
+
+.gantt-tooltip-key {
+  color: var(--app-fg-dim);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.gantt-tooltip-val {
+  font-family: var(--font-mono), monospace;
+  font-weight: 600;
+  color: var(--app-fg);
+}
+
+.gantt-tooltip-action {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--app-border-subtle);
+  font-size: 0.72rem;
+  color: var(--app-fg-muted);
+  font-style: italic;
+  font-family: var(--font-mono), monospace;
+}
+
+/* Instruction summary table */
+.gantt-summary-wrap {
+  flex-shrink: 0;
+  margin-top: 14px;
+}
+
+.gantt-section-title {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--app-fg-muted);
+}
+
+/* Percentage bar in summary table */
+.gantt-pct-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 80px;
+}
+
+.gantt-pct-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--app-accent);
+  min-width: 2px;
+  transition: width 0.3s ease;
+}
+
+.gantt-pct-label {
+  font-size: 0.72rem;
+  color: var(--app-fg-dim);
+  white-space: nowrap;
+  font-family: var(--font-mono), monospace;
+}
+
+/* Raw cycle log (collapsible) */
+.gantt-raw-section {
+  flex-shrink: 0;
+  margin-top: 10px;
+}
+
+.gantt-collapse-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.775rem;
+  font-weight: 600;
+  color: var(--app-fg-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 0;
+  transition: color 0.15s;
+}
+
+.gantt-collapse-btn:hover {
+  color: var(--app-fg);
+}
+
+.gantt-collapse-chevron {
+  font-size: 0.65rem;
+}
+
+/* Shared cycle table */
+.cycle-table-wrap {
+  overflow-x: auto;
+  margin-top: 6px;
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--radius-tool);
+}
+
+.cycle-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.775rem;
+  color: var(--app-fg);
+}
+
+.cycle-table th {
+  background: var(--app-surface-elevated);
+  padding: 7px 12px;
+  text-align: left;
+  font-weight: 700;
+  font-size: 0.69rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--app-fg-dim);
+  border-bottom: 1px solid var(--app-border-subtle);
+  white-space: nowrap;
+}
+
+.cycle-table td {
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--app-border-subtle);
+  vertical-align: middle;
+}
+
+.cycle-table tr:last-child td {
+  border-bottom: none;
+}
+
+.cycle-table tr:hover td {
+  background: var(--app-surface-elevated);
+}
+
+.cycle-table-cycle {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.75rem;
+  color: var(--app-fg-dim);
+}
+
+.cycle-table-time {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.75rem;
+  color: var(--vscode-charts-blue);
+}
+
+.cycle-action-cell {
+  font-size: 0.72rem;
+  color: var(--app-fg-dim);
+  font-style: italic;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.instr-mnemonic {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--vscode-charts-green);
+  background: color-mix(in srgb, var(--vscode-charts-green) 10%, transparent);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+/* Stage badge (colored pill in raw log) */
+.stage-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.stage-fetch       { background: rgba(99, 102, 241, 0.18); color: #6366f1; }
+.stage-decode      { background: rgba(34, 197, 94, 0.18);  color: #22c55e; }
+.stage-execute     { background: rgba(245, 158, 11, 0.18); color: #f59e0b; }
+.stage-memory      { background: rgba(236, 72, 153, 0.18); color: #ec4899; }
+.stage-write-back  { background: rgba(59, 130, 246, 0.18); color: #3b82f6; }
+.stage-halted      { background: rgba(239, 68, 68, 0.18);  color: #ef4444; }
