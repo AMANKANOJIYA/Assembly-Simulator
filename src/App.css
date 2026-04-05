@@ -641,6 +641,20 @@
   background: var(--app-surface-elevated);
   border-color: var(--app-fg-muted);
 }
+.hw-float-btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+.hw-float-playpause {
+  min-width: 34px;
+  font-size: 1rem;
+  background: rgba(99,102,241,0.14);
+  border-color: #6366f155;
+  color: #818cf8;
+}
+.hw-float-playpause:hover:not(:disabled) {
+  background: rgba(99,102,241,0.26);
+}
 .hw-float-zoom {
   font-size: 0.8rem;
   min-width: 40px;

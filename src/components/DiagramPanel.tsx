@@ -1,7 +1,7 @@
 import { useRef, useCallback, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useStore } from "../store";
-import type { TraceEvent } from "../types";
+import type { TraceEvent, UiSchema } from "../types";
 
 // ── Stage palette — same as Pipeline Timing Gantt ────────────────────────────
 const STAGE_PALETTE = {
@@ -115,6 +115,50 @@ function HwWire({ d, active, type = "data", label, labelX, labelY, markerSuffix 
           className={`hw-bus-label ${active ? "hw-bus-label--on" : ""}`}>{label}</text>
       )}
     </g>
+  );
+}
+
+// ── Generic diagram (for non-RV32I ISAs) ─────────────────────────────────────
+
+function GenericDiagram({ schema, activeBlockIds, vbW, vbH }: {
+  schema: UiSchema; activeBlockIds: Set<string>; vbW: number; vbH: number;
+}) {
+  // Build a quick id→block map for connection endpoint lookup
+  const blockMap = Object.fromEntries(schema.blocks.map(b => [b.id, b]));
+
+  return (
+    <svg viewBox={`0 0 ${vbW} ${vbH}`} className="diagram-svg hw-diagram-svg" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <marker id="gen-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+          <path d="M0,0 L7,3.5 L0,7 Z" className="hw-arrow-head" />
+        </marker>
+      </defs>
+
+      {/* Connections */}
+      {schema.connections.map((c, i) => {
+        const f = blockMap[c.from]; const t = blockMap[c.to];
+        if (!f || !t) return null;
+        const fx = f.x + f.width; const fy = f.y + f.height / 2;
+        const tx = t.x - 6;      const ty = t.y + t.height / 2;
+        return (
+          <line key={i} x1={fx} y1={fy} x2={tx} y2={ty}
+            className="hw-wire hw-wire--data" markerEnd="url(#gen-arrow)" />
+        );
+      })}
+
+      {/* Blocks */}
+      {schema.blocks.map(b => {
+        const active = activeBlockIds.has(b.id);
+        return (
+          <g key={b.id} className={`hw-block ${active ? "hw-block--active" : ""}`}
+             style={{ "--hw-color": "#6366f1" } as React.CSSProperties}>
+            <rect x={b.x} y={b.y} width={b.width} height={b.height} rx={5} className="hw-rect" />
+            {active && <rect x={b.x-2} y={b.y-2} width={b.width+4} height={b.height+4} rx={7} className="hw-glow-ring" fill="none" />}
+            <text x={b.x + b.width/2} y={b.y + b.height/2} textAnchor="middle" dominantBaseline="middle" className="hw-label">{b.label}</text>
+          </g>
+        );
+      })}
+    </svg>
   );
 }
 
@@ -393,11 +437,23 @@ const MIN_ZOOM = 0.4; const MAX_ZOOM = 4; const ZOOM_STEP = 0.15;
 
 export function DiagramPanel() {
   const arch            = useStore(s => s.arch);
+  const uiSchema        = useStore(s => s.uiSchema);
   const traceEvents     = useStore(s => s.snapshot?.trace_events ?? []);
+  const snapshot        = useStore(s => s.snapshot);
   const archExpanded    = useStore(s => s.archExpanded);
   const setArchExpanded = useStore(s => s.setArchExpanded);
+  const runIntervalId   = useStore(s => s.runIntervalId);
+  const run             = useStore(s => s.run);
+  const pause           = useStore(s => s.pause);
+  const stepForward     = useStore(s => s.stepForward);
+  const stepBack        = useStore(s => s.stepBack);
   // keep store compat
   useStore(s => s.resetBlockPositions);
+
+  const isRunning   = runIntervalId != null;
+  const isHalted    = snapshot?.halted ?? false;
+  const canStepBack = snapshot?.can_step_back ?? false;
+  const assembled   = snapshot != null;
 
   const [zoom, setZoom] = useState(1);
   const [pan,  setPan]  = useState({ x: 0, y: 0 });
@@ -459,10 +515,19 @@ export function DiagramPanel() {
   const viewBox = `${pan.x} ${pan.y} ${E.W / zoom} ${E.H / zoom}`;
   const isRV32I = arch === "RV32I";
 
-  // Active event chip
+  // Active block IDs for generic ISA (match block id/label against trace event names)
+  const genericActiveIds = new Set(
+    uiSchema?.blocks
+      .filter(b => traceEvents.some(ev => b.id.toLowerCase().includes(ev.toLowerCase()) || ev.toLowerCase().includes(b.id.toLowerCase())))
+      .map(b => b.id) ?? []
+  );
+
+  // Active event chip (RV32I only)
   const lastEvent = traceEvents[traceEvents.length - 1];
   const lastStage: StageName = lastEvent ? (BLOCK_STAGE[(EV_BLOCKS[lastEvent] ?? [])[0]] ?? "IF") : "IF";
   const lastPal = STAGE_PALETTE[lastStage];
+
+  const closeExpanded = () => { setArchExpanded(false); setZoom(1); setPan({ x: 0, y: 0 }); };
 
   return (
     <>
@@ -485,33 +550,44 @@ export function DiagramPanel() {
         <div className={`diagram-container ${tall ? "diagram-container--tall" : "diagram-container--short"}`}>
           {isRV32I
             ? <CompactDiagram activeBlocks={ab} activeWires={aw} />
-            : <div className="diagram-placeholder" style={{ padding: "18px 12px", textAlign: "center", color: "var(--app-fg-muted)", fontSize: "0.8rem" }}>
-                Click <strong>⊞</strong> to view the {arch} architecture diagram
-              </div>}
+            : uiSchema
+              ? <GenericDiagram schema={uiSchema} activeBlockIds={genericActiveIds} vbW={450} vbH={170} />
+              : <div className="diagram-placeholder" style={{ padding: "18px 12px", textAlign: "center", color: "var(--app-fg-muted)", fontSize: "0.8rem" }}>
+                  Assemble a program to view the {arch} architecture
+                </div>}
         </div>
         <div className="diagram-hint">▼/▲ resize · ⊞ full screen circuit diagram</div>
       </div>
 
+      {/* Full-screen overlay — portal on body to escape all stacking contexts */}
       {archExpanded && createPortal(
-        <div className="arch-expanded-overlay" onClick={() => { setArchExpanded(false); setZoom(1); setPan({ x: 0, y: 0 }); }}>
+        <div className="arch-expanded-overlay" onClick={closeExpanded}>
           <div className="arch-expanded-content hw-expanded-content" onClick={e => e.stopPropagation()}>
             <div ref={containerRef} className="arch-expanded-svg arch-zoom-pan-container">
-              <ExpandedDiagram
-                activeBlocks={ab} activeWires={aw}
-                isPanning={isPanning} svgRef={svgRef}
-                viewBox={viewBox} onBgMouseDown={handleBgMouseDown} />
+              {isRV32I
+                ? <ExpandedDiagram
+                    activeBlocks={ab} activeWires={aw}
+                    isPanning={isPanning} svgRef={svgRef}
+                    viewBox={viewBox} onBgMouseDown={handleBgMouseDown} />
+                : uiSchema
+                  ? <GenericDiagram schema={uiSchema} activeBlockIds={genericActiveIds} vbW={1080} vbH={500} />
+                  : <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100%", color:"var(--app-fg-muted)", fontSize:"1rem" }}>
+                      Assemble a program to view the {arch} architecture
+                    </div>}
             </div>
           </div>
         </div>,
         document.body
       )}
 
-      {/* Floating controls — own portal so overflow:hidden on anything can't clip it */}
+      {/* Floating controls — separate portal, position:fixed z-index:30000 */}
       {archExpanded && createPortal(
         <div className="hw-float-controls">
-          <span className="hw-float-title">RV32I — Single-Cycle Datapath</span>
+          {/* Title */}
+          <span className="hw-float-title">{arch} Architecture</span>
 
-          {traceEvents.length > 0 && (
+          {/* Active event pills (RV32I only) */}
+          {isRV32I && traceEvents.length > 0 && (
             <span className="hw-float-pills">
               {traceEvents.map((ev, i) => {
                 const stage: StageName = (BLOCK_STAGE[(EV_BLOCKS[ev] ?? [])[0]] ?? "IF") as StageName;
@@ -526,14 +602,30 @@ export function DiagramPanel() {
 
           <span className="hw-float-sep" />
 
+          {/* Playback controls */}
+          <button type="button" className="hw-float-btn" title="Step back"
+            disabled={!canStepBack || isRunning}
+            onClick={() => stepBack()}>◀</button>
+          <button type="button" className="hw-float-btn hw-float-playpause" title={isRunning ? "Pause" : "Run"}
+            disabled={!assembled || isHalted}
+            onClick={() => isRunning ? pause() : run()}>
+            {isRunning ? "⏸" : "▶"}
+          </button>
+          <button type="button" className="hw-float-btn" title="Step forward"
+            disabled={!assembled || isHalted || isRunning}
+            onClick={() => stepForward()}>▶|</button>
+
+          <span className="hw-float-sep" />
+
+          {/* Zoom controls */}
           <button type="button" className="hw-float-btn" title="Zoom out" onClick={() => setZoom(z => Math.max(MIN_ZOOM, z - ZOOM_STEP))}>−</button>
           <span className="hw-float-zoom">{Math.round(zoom * 100)}%</span>
           <button type="button" className="hw-float-btn" title="Zoom in"  onClick={() => setZoom(z => Math.min(MAX_ZOOM, z + ZOOM_STEP))}>+</button>
           <button type="button" className="hw-float-btn" title="Fit to screen" onClick={handleFit}>⊡ Fit</button>
           <button type="button" className="hw-float-btn" title="Reset zoom & pan" onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}>↺</button>
 
-          <button type="button" className="hw-float-close" title="Close (Esc)"
-            onClick={() => { setArchExpanded(false); setZoom(1); setPan({ x: 0, y: 0 }); }}>
+          {/* Close */}
+          <button type="button" className="hw-float-close" title="Close (Esc)" onClick={closeExpanded}>
             ✕ Close
           </button>
         </div>,
