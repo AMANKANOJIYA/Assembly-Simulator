@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useStore } from "../store";
 
 export function RuntimeConsole() {
@@ -6,18 +6,59 @@ export function RuntimeConsole() {
   const panelVisibility = useStore((s) => s.panelVisibility);
   const stepForwardWithInput = useStore((s) => s.stepForwardWithInput);
   const [inputValue, setInputValue] = useState("");
+  // Local clear offset: hide everything before this char index
+  const [clearOffset, setClearOffset] = useState(0);
+  const [copied, setCopied] = useState(false);
+  const outputRef = useRef<HTMLPreElement>(null);
+
   const runError = snapshot?.run_error;
-  const ioOutput = snapshot?.io_output ?? "";
+  const rawOutput = snapshot?.io_output ?? "";
+  // Show output after the clear offset
+  const ioOutput = rawOutput.substring(clearOffset);
   const ioInputRequested = snapshot?.io_input_requested;
+
+  // Reset clear offset when simulator resets (output shrinks)
+  useEffect(() => {
+    if (rawOutput.length < clearOffset) setClearOffset(0);
+  }, [rawOutput.length, clearOffset]);
+
+  // Auto-scroll output to bottom on new content
+  useEffect(() => {
+    if (outputRef.current) {
+      outputRef.current.scrollTop = outputRef.current.scrollHeight;
+    }
+  }, [ioOutput]);
 
   const handleInputSubmit = (val?: string) => {
     stepForwardWithInput(val ?? inputValue);
     setInputValue("");
   };
 
-  const outputNeeded = (ioOutput?.length ?? 0) > 0;
+  const handleClear = () => {
+    setClearOffset(rawOutput.length);
+  };
+
+  const handleCopy = async () => {
+    if (!ioOutput) return;
+    try {
+      await navigator.clipboard.writeText(ioOutput);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // fallback — select all in the pre
+      if (outputRef.current) {
+        const sel = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(outputRef.current);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      }
+    }
+  };
+
+  const outputNeeded = ioOutput.length > 0;
   const inputNeeded = !!ioInputRequested;
-  const showOutputSection = panelVisibility.output && outputNeeded;
+  const showOutputSection = panelVisibility.output && (outputNeeded || rawOutput.length > 0);
   const showInputSection = panelVisibility.input && inputNeeded;
   const showConsole = showOutputSection || showInputSection || !!runError;
 
@@ -40,11 +81,35 @@ export function RuntimeConsole() {
             <>
               <div className="runtime-console-header runtime-console-output">
                 <span>Program Output</span>
+                <div className="runtime-console-actions">
+                  <button
+                    type="button"
+                    className="console-action-btn"
+                    onClick={handleCopy}
+                    disabled={!ioOutput}
+                    title="Copy output to clipboard"
+                  >
+                    {copied ? "✓ Copied" : "Copy"}
+                  </button>
+                  <button
+                    type="button"
+                    className="console-action-btn console-action-btn--danger"
+                    onClick={handleClear}
+                    disabled={!outputNeeded}
+                    title="Clear displayed output"
+                  >
+                    Clear
+                  </button>
+                </div>
               </div>
               <div className="runtime-console-body">
-                <pre className="runtime-console-io">{ioOutput}</pre>
+                {outputNeeded ? (
+                  <pre ref={outputRef} className="runtime-console-io">{ioOutput}</pre>
+                ) : (
+                  <p className="runtime-console-cleared">Output cleared. New output will appear here.</p>
+                )}
                 <div className="runtime-console-hint">
-                  RISC-V: a7=11 print int, a7=12 print char. MIPS: v0=1 print int, v0=11 print char. LC-3: TRAP x20 OUT.
+                  RV32I: a7=11 print int, a7=12 print char · MIPS: v0=1 print int, v0=11 print char · LC-3: TRAP x20 OUT
                 </div>
               </div>
             </>
@@ -74,18 +139,12 @@ export function RuntimeConsole() {
                   </button>
                   {ioInputRequested.kind === "char" && (
                     <>
-                      <button type="button" onClick={() => handleInputSubmit("\n")} className="btn btn-small" title="Send newline">
-                        ↵
-                      </button>
-                      <button type="button" onClick={() => handleInputSubmit("0")} className="btn btn-small" title="Send '0'">
-                        0
-                      </button>
+                      <button type="button" onClick={() => handleInputSubmit("\n")} className="btn btn-small" title="Send newline">↵</button>
+                      <button type="button" onClick={() => handleInputSubmit("0")} className="btn btn-small" title="Send '0'">0</button>
                     </>
                   )}
                   {ioInputRequested.kind === "int" && (
-                    <button type="button" onClick={() => handleInputSubmit("0")} className="btn btn-small" title="Send 0">
-                      0
-                    </button>
+                    <button type="button" onClick={() => handleInputSubmit("0")} className="btn btn-small" title="Send 0">0</button>
                   )}
                 </div>
               </div>
@@ -101,7 +160,7 @@ export function RuntimeConsole() {
               <div className="runtime-console-body">
                 <pre className="runtime-console-message">{runError}</pre>
                 <div className="runtime-console-hint">
-                  Assembly succeeded but execution failed. Check the PC (program counter) and instruction at the error location.
+                  Assembly succeeded but execution failed. Check the PC and the instruction at the error location.
                 </div>
               </div>
             </>

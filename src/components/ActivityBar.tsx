@@ -31,6 +31,15 @@ function IconSettings() {
   );
 }
 
+function IconShortcuts() {
+  return (
+    <svg className="activity-bar-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="2" y="5" width="20" height="14" rx="2" />
+      <path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M8 13h.01M12 13h4M6 17h12" />
+    </svg>
+  );
+}
+
 /** VS Code–style: files in navigator, diagram, bottom panel, settings at bottom */
 export function ActivityBar() {
   const diagramPanelOpen = useStore((s) => s.diagramPanelOpen);
@@ -38,6 +47,7 @@ export function ActivityBar() {
   const bottomPanelOpen = useStore((s) => s.bottomPanelOpen);
   const setBottomPanelOpen = useStore((s) => s.setBottomPanelOpen);
   const setSettingsOpen = useStore((s) => s.setSettingsOpen);
+  const setShortcutsOpen = useStore((s) => s.setShortcutsOpen);
 
   return (
     <aside className="activity-bar" aria-label="Activity bar">
@@ -68,6 +78,18 @@ export function ActivityBar() {
         <span className="activity-bar-label">Panel</span>
       </button>
       <div className="activity-bar-spacer" />
+      <button
+        type="button"
+        className="activity-bar-btn activity-bar-btn--icon"
+        title="Keyboard shortcuts (?)"
+        aria-label="Keyboard shortcuts"
+        onClick={() => setShortcutsOpen(true)}
+      >
+        <span className="activity-bar-icon-wrap" aria-hidden>
+          <IconShortcuts />
+        </span>
+        <span className="activity-bar-label">Shortcuts</span>
+      </button>
       <button
         type="button"
         className="activity-bar-btn activity-bar-btn--icon activity-bar-btn-settings"

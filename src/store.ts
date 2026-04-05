@@ -19,7 +19,7 @@ export interface PanelVisibility {
   output: boolean;
 }
 
-export type PanelId = "registers" | "memory" | "trace";
+export type PanelId = "registers" | "memory" | "trace" | "breakpoints" | "watch";
 
 export type ThemeMode = "dark" | "light";
 
@@ -86,6 +86,14 @@ export interface AppState {
   editorFontSize: number;
   uiDensity: UiDensity;
   reducedMotion: boolean;
+  /** Previous register values (set on each snapshot update for diff highlighting) */
+  prevRegs: number[] | null;
+  /** Keyboard shortcuts modal */
+  shortcutsOpen: boolean;
+  /** Request to jump the editor to a specific line (null = no pending request) */
+  jumpToLineRequest: number | null;
+  /** Memory watch list: array of hex address strings the user is watching */
+  watchList: string[];
 }
 
 export interface AppActions {
@@ -138,6 +146,11 @@ export interface AppActions {
   setEditorFontSize: (px: number) => void;
   setUiDensity: (d: UiDensity) => void;
   setReducedMotion: (v: boolean) => void;
+  setShortcutsOpen: (v: boolean) => void;
+  setJumpToLineRequest: (line: number | null) => void;
+  addWatch: (addr: string) => void;
+  removeWatch: (addr: string) => void;
+  exportAsm: () => void;
 }
 
 function getActiveSource(state: AppState): string {
@@ -172,7 +185,7 @@ export const useStore = create<AppState & AppActions>((set, get) => ({
   },
   archExpanded: false,
   blockPositions: {},
-  panelOrder: ["registers", "memory", "trace"],
+  panelOrder: ["registers", "memory", "trace", "breakpoints", "watch"],
   customizeMode: false,
   cycleHistory: [],
   cycleGraphOpen: false,
@@ -188,6 +201,10 @@ export const useStore = create<AppState & AppActions>((set, get) => ({
   editorFontSize: 13,
   uiDensity: "comfortable",
   reducedMotion: false,
+  prevRegs: null,
+  shortcutsOpen: false,
+  jumpToLineRequest: null,
+  watchList: [],
 
   setSource: (text) =>
     set((state) => ({
@@ -200,7 +217,7 @@ export const useStore = create<AppState & AppActions>((set, get) => ({
   setSpeed: (s) => set({ speed: s }),
   setClockMHz: (m) => set({ clockMHz: m }),
   setMemorySize: (s) => set({ memorySize: s }),
-  setSnapshot: (s) => set({ snapshot: s }),
+  setSnapshot: (s) => set((state) => ({ snapshot: s, prevRegs: state.snapshot?.state.regs ?? null })),
   setToast: (t) => set({ toast: t }),
 
   assemble: async () => {
@@ -602,6 +619,24 @@ export const useStore = create<AppState & AppActions>((set, get) => ({
     set({ editorFontSize: Math.min(20, Math.max(11, Math.round(px))) }),
   setUiDensity: (d) => set({ uiDensity: d }),
   setReducedMotion: (v) => set({ reducedMotion: v }),
+  setShortcutsOpen: (v) => set({ shortcutsOpen: v }),
+  setJumpToLineRequest: (line) => set({ jumpToLineRequest: line }),
+  addWatch: (addr) =>
+    set((s) => ({ watchList: s.watchList.includes(addr) ? s.watchList : [...s.watchList, addr] })),
+  removeWatch: (addr) => set((s) => ({ watchList: s.watchList.filter((a) => a !== addr) })),
+  exportAsm: () => {
+    const { tabBuffers, activeEditorTabId, editorTabs } = get();
+    const source = tabBuffers[activeEditorTabId] ?? "";
+    const tab = editorTabs.find((t) => t.id === activeEditorTabId);
+    const fileName = tab?.title?.replace(/\.asim$/, "") ?? "program";
+    const blob = new Blob([source], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName.endsWith(".asm") ? fileName : `${fileName}.asm`;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
 }));
 
 const PERSIST_KEY = "asim-session";

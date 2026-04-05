@@ -4,11 +4,15 @@ import type { PanelId } from "../store";
 import { RegistersPanel } from "./RegistersPanel";
 import { MemoryPanel } from "./MemoryPanel";
 import { TracePanel } from "./TracePanel";
+import { BreakpointsPanel } from "./BreakpointsPanel";
+import { WatchPanel } from "./WatchPanel";
 
 const LABELS: Record<PanelId, string> = {
-  registers: "Registers",
-  memory: "Memory",
-  trace: "Trace",
+  registers:   "Registers",
+  memory:      "Memory",
+  trace:       "Trace",
+  breakpoints: "Breakpoints",
+  watch:       "Watch",
 };
 
 function TabIcon({ id }: { id: PanelId }) {
@@ -31,28 +35,50 @@ function TabIcon({ id }: { id: PanelId }) {
       </svg>
     );
   }
+  if (id === "trace") {
+    return (
+      <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+        <path d="M4 6h16M4 12h10M4 18h14" />
+        <circle cx="18" cy="12" r="2" fill="currentColor" stroke="none" />
+      </svg>
+    );
+  }
+  if (id === "breakpoints") {
+    return (
+      <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+        <circle cx="12" cy="12" r="8" />
+        <circle cx="12" cy="12" r="4" fill="currentColor" stroke="none" />
+      </svg>
+    );
+  }
+  // watch
   return (
     <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
-      <path d="M4 6h16M4 12h10M4 18h14" />
-      <circle cx="18" cy="12" r="2" fill="currentColor" stroke="none" />
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
     </svg>
   );
 }
 
-/** Single tab navigator for the three data panels (replaces multi-split clutter) */
+/** Single tab navigator for the four data panels */
 export function SidebarPanel() {
   const panelVisibility = useStore((s) => s.panelVisibility);
+  const breakpoints = useStore((s) => s.breakpoints);
   const sidebarView = useStore((s) => s.sidebarView);
   const setSidebarView = useStore((s) => s.setSidebarView);
 
-  const available = (["registers", "memory", "trace"] as const).filter((id) => panelVisibility[id]);
+  const ALL_PANELS: PanelId[] = ["registers", "memory", "trace", "breakpoints", "watch"];
+  const available = ALL_PANELS.filter((id) =>
+    id === "breakpoints" ? true : panelVisibility[id as keyof typeof panelVisibility]
+  );
 
   useEffect(() => {
-    if (!panelVisibility[sidebarView]) {
-      const first = (["registers", "memory", "trace"] as const).find((id) => panelVisibility[id]);
+    const isAvailable = available.includes(sidebarView);
+    if (!isAvailable) {
+      const first = available[0];
       if (first) setSidebarView(first);
     }
-  }, [panelVisibility, sidebarView, setSidebarView]);
+  }, [available, sidebarView, setSidebarView]);
 
   return (
     <div className="sidebar-unified">
@@ -68,6 +94,9 @@ export function SidebarPanel() {
           >
             <TabIcon id={id} />
             <span className="sidebar-unified-tab-text">{LABELS[id]}</span>
+            {id === "breakpoints" && breakpoints.length > 0 && (
+              <span className="sidebar-tab-count">{breakpoints.length}</span>
+            )}
           </button>
         ))}
       </div>
@@ -79,6 +108,8 @@ export function SidebarPanel() {
             {sidebarView === "registers" && panelVisibility.registers && <RegistersPanel />}
             {sidebarView === "memory" && panelVisibility.memory && <MemoryPanel />}
             {sidebarView === "trace" && panelVisibility.trace && <TracePanel />}
+            {sidebarView === "breakpoints" && <BreakpointsPanel />}
+            {sidebarView === "watch" && <WatchPanel />}
           </>
         )}
       </div>

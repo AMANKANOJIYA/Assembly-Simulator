@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { SplitPane, Pane } from "react-split-pane";
 import "react-split-pane/styles.css";
 import { EditorPanel } from "./components/Editor";
@@ -21,6 +21,7 @@ import { ActivityBar } from "./components/ActivityBar";
 import { StatusStrip } from "./components/StatusStrip";
 import { SidebarPanel } from "./components/SidebarPanel";
 import { AppearanceSync } from "./components/AppearanceSync";
+import { KeyboardShortcutsModal } from "./components/KeyboardShortcutsModal";
 
 function LeftColumnStack() {
   const diagramPanelOpen = useStore((s) => s.diagramPanelOpen);
@@ -46,6 +47,62 @@ function LeftColumnStack() {
   );
 }
 
+type DockTab = "console" | "clock";
+
+function BottomDock() {
+  const [activeTab, setActiveTab] = useState<DockTab>("console");
+  const setBottomPanelOpen = useStore((s) => s.setBottomPanelOpen);
+  const ioWait = useStore((s) => !!s.snapshot?.io_input_requested);
+
+  // Auto-switch to console when I/O is requested
+  useEffect(() => {
+    if (ioWait) setActiveTab("console");
+  }, [ioWait]);
+
+  const tabs: { id: DockTab; label: string }[] = [
+    { id: "console", label: "Console / I/O" },
+    { id: "clock",   label: "Clock" },
+  ];
+
+  return (
+    <div className="bottom-dock">
+      <div className="dock-tab-bar" role="tablist">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            role="tab"
+            aria-selected={activeTab === t.id}
+            className={`dock-tab ${activeTab === t.id ? "dock-tab--active" : ""}`}
+            onClick={() => setActiveTab(t.id)}
+          >
+            {t.label}
+            {t.id === "console" && ioWait && (
+              <span className="dock-tab-badge" aria-label="Input requested" />
+            )}
+          </button>
+        ))}
+        <button
+          className="dock-close-btn"
+          onClick={() => setBottomPanelOpen(false)}
+          aria-label="Close bottom panel"
+          title="Close"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div className="dock-tab-content" role="tabpanel">
+        <div style={{ display: activeTab === "console" ? "contents" : "none" }}>
+          <RuntimeConsole />
+        </div>
+        <div style={{ display: activeTab === "clock" ? "contents" : "none" }}>
+          <ClockPanel />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MainWorkspace() {
   const bottomPanelOpen = useStore((s) => s.bottomPanelOpen);
   const setBottomPanelOpen = useStore((s) => s.setBottomPanelOpen);
@@ -66,15 +123,6 @@ function MainWorkspace() {
         <EditorPanel />
       </Pane>
     </SplitPane>
-  );
-
-  const bottomDock = (
-    <div className="bottom-dock">
-      <RuntimeConsole />
-      <footer className="app-footer">
-        <ClockPanel />
-      </footer>
-    </div>
   );
 
   return (
@@ -99,7 +147,7 @@ function MainWorkspace() {
         className={`main-workspace-bottom${bottomPanelOpen ? " main-workspace-bottom--open" : ""}`}
         aria-hidden={!bottomPanelOpen}
       >
-        {bottomDock}
+        <BottomDock />
       </div>
     </div>
   );
@@ -138,6 +186,15 @@ function App() {
   // never needs to re-run when those functions change reference.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      // ? key (no modifier) opens shortcuts modal, unless typing in an input
+      if (e.key === "?" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const tag = (e.target as HTMLElement)?.tagName;
+        if (tag !== "INPUT" && tag !== "TEXTAREA") {
+          e.preventDefault();
+          useStore.getState().setShortcutsOpen(true);
+          return;
+        }
+      }
       if (!(e.metaKey || e.ctrlKey)) return;
       if (e.key === "s") {
         e.preventDefault();
@@ -182,6 +239,7 @@ function App() {
         <HelpPanel />
         <SettingsPanel />
         <OnboardingTour />
+        <KeyboardShortcutsModal />
       </div>
     </ErrorBoundary>
   );

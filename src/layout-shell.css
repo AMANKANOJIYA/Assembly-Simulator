@@ -290,9 +290,9 @@ html[data-reduced-motion="true"] .activity-bar-btn:active {
 }
 
 .activity-bar-btn.is-active {
-  color: var(--app-fg);
+  color: var(--app-accent);
   border-left-color: var(--app-accent);
-  background: var(--app-accent-dim);
+  background: color-mix(in srgb, var(--app-accent) 14%, transparent);
 }
 
 .activity-bar-icon-wrap {
@@ -379,22 +379,66 @@ html[data-reduced-motion="true"] .activity-bar-btn:active {
   font-family: var(--font-mono);
 }
 
+.status-chip--arch {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+}
+
+.status-arch-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-strip-sep {
+  display: block;
+  width: 1px;
+  height: 14px;
+  background: var(--app-border-subtle);
+  flex-shrink: 0;
+}
+
 .status-chip--state {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-size: 0.625rem;
+  font-weight: 600;
+}
+
+.status-state-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+.status-state-dot--pulse {
+  animation: status-pulse 1s ease-in-out infinite;
 }
 
 .status-chip--halt {
-  border-color: color-mix(in srgb, var(--app-fg-muted) 50%, transparent);
-  background: var(--app-highlight-error);
-  color: var(--app-fg);
+  border-color: color-mix(in srgb, #f87171 35%, transparent);
+  background: color-mix(in srgb, #f87171 12%, transparent);
+  color: #f87171;
+  font-weight: 600;
 }
 
 .status-chip--io {
-  border-color: color-mix(in srgb, #b8860b 60%, var(--app-border));
-  background: var(--app-highlight-io);
-  color: var(--app-fg);
+  border-color: color-mix(in srgb, #fbbf24 40%, var(--app-border));
+  background: color-mix(in srgb, #fbbf24 12%, transparent);
+  color: #fbbf24;
   font-weight: 600;
 }
 
@@ -404,15 +448,22 @@ html[data-reduced-motion="true"] .activity-bar-btn:active {
   color: var(--app-fg);
 }
 
-.state-idle {
-  opacity: 0.9;
+.status-chip--errors {
+  border-color: color-mix(in srgb, #f87171 40%, transparent);
+  background: color-mix(in srgb, #f87171 12%, transparent);
+  color: #f87171;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.1s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
-.state-running {
-  color: var(--app-accent);
-  border-color: var(--app-accent);
+.status-chip--errors:hover {
+  background: color-mix(in srgb, #f87171 20%, transparent);
 }
-.state-halted {
-  color: var(--app-fg-dim);
+.status-error-icon {
+  font-size: 0.6rem;
 }
 .state-error {
   border-color: #f14c4c;
@@ -426,18 +477,81 @@ html[data-reduced-motion="true"] .activity-bar-btn:active {
   flex: 1;
   min-height: 0;
   background: transparent;
+  overflow: hidden;
+}
+
+/* Tab bar */
+.dock-tab-bar {
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  height: 32px;
+  background: var(--app-surface-elevated);
+  border-bottom: 1px solid var(--app-border);
+  gap: 0;
+}
+
+.dock-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  font-family: var(--font-ui);
+  color: var(--app-fg-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+  user-select: none;
+  position: relative;
+}
+
+.dock-tab:hover {
+  color: var(--app-fg);
+  background: var(--app-accent-dim);
+}
+
+.dock-tab--active {
+  color: var(--app-fg);
+  border-bottom-color: var(--app-accent);
+  font-weight: 600;
+}
+
+/* Badge dot for pending I/O */
+.dock-tab-badge {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f59e0b;
+  animation: status-pulse 1s ease-in-out infinite;
+}
+
+.dock-tab-content {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
+  display: flex;
+  flex-direction: column;
 }
 
-.bottom-dock .runtime-console {
-  flex-shrink: 0;
+/* Close button at end of tab bar */
+.dock-close-btn {
+  margin-left: auto;
+  padding: 0 12px;
+  font-size: 0.75rem;
+  color: var(--app-fg-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.12s ease;
+  line-height: 1;
 }
-
-.bottom-dock .clock-panel,
-.bottom-dock .app-footer {
-  flex-shrink: 0;
-  border-top: 1px solid var(--app-border-subtle);
-  margin: 0;
+.dock-close-btn:hover {
+  color: var(--app-fg);
 }
 
 .app-footer {
@@ -459,12 +573,26 @@ html[data-reduced-motion="true"] .activity-bar-btn:active {
   border-bottom: 1px solid var(--app-border);
 }
 
-.panel-header h3 {
+.panel-header h3,
+.panel-title {
   font-size: 0.6875rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--app-fg-muted);
+}
+
+/* Pill badge shown beside panel titles (e.g. "12 events") */
+.panel-badge {
+  font-size: 0.625rem;
+  font-weight: 500;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: var(--app-accent-dim);
+  border: 1px solid color-mix(in srgb, var(--app-accent) 30%, transparent);
+  color: var(--app-fg-muted);
+  font-variant-numeric: tabular-nums;
+  margin-left: auto;
 }
 
 .btn {
@@ -592,10 +720,6 @@ html[data-reduced-motion="true"] .btn:active:not(:disabled) {
   outline: 1px solid var(--app-accent);
 }
 
-.registers-panel .reg-row.pc-row {
-  background: var(--app-highlight-pc);
-  border-left: 2px solid var(--app-accent);
-}
 
 /* Runtime console — theme tokens (overrides legacy App.css colors) */
 .main-workspace-bottom .runtime-console {
@@ -787,36 +911,37 @@ html[data-reduced-motion="true"] .btn:active:not(:disabled) {
 
 .sidebar-unified-tabs {
   display: flex;
+  align-items: stretch;
   flex-wrap: wrap;
-  gap: 2px;
-  padding: 6px 8px 0;
+  gap: 0;
+  padding: 0 4px;
   background: var(--app-surface-elevated);
-  border-bottom: 1px solid var(--app-border-subtle);
+  border-bottom: 1px solid var(--app-border);
+  min-height: 36px;
 }
 
 .sidebar-unified-tab {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  border: 1px solid transparent;
-  border-bottom: none;
-  border-radius: var(--radius-tool) var(--radius-tool) 0 0;
-  padding: 6px 12px;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  gap: 6px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 0 12px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   color: var(--app-fg-muted);
   background: transparent;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+  user-select: none;
 }
 
 .sidebar-unified-tab-ico {
-  width: 1.2rem;
-  height: 1.2rem;
+  width: 1.05rem;
+  height: 1.05rem;
   flex-shrink: 0;
-  opacity: 0.92;
+  opacity: 0.8;
 }
 
 .sidebar-unified-tab.is-active .sidebar-unified-tab-ico {
@@ -831,26 +956,24 @@ html[data-reduced-motion="true"] .btn:active:not(:disabled) {
 
   .sidebar-unified-tab {
     justify-content: center;
-    padding: 8px 10px;
+    padding: 0 10px;
   }
 
   .sidebar-unified-tab-ico {
-    width: 1.45rem;
-    height: 1.45rem;
+    width: 1.3rem;
+    height: 1.3rem;
   }
 }
 
 .sidebar-unified-tab:hover {
   color: var(--app-fg);
-  background: color-mix(in srgb, var(--app-accent-dim) 55%, transparent);
+  background: var(--app-accent-dim);
 }
 
 .sidebar-unified-tab.is-active {
   color: var(--app-fg);
-  background: var(--app-surface);
-  border-color: var(--app-border);
-  border-bottom-color: var(--app-surface);
-  margin-bottom: -1px;
+  border-bottom-color: var(--app-accent);
+  font-weight: 600;
 }
 
 .sidebar-unified-body {
@@ -868,6 +991,9 @@ html[data-reduced-motion="true"] .btn:active:not(:disabled) {
   box-shadow: none;
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .sidebar-unified-empty {

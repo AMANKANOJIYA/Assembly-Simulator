@@ -32,6 +32,8 @@ export function EditorPanel() {
   const themeMode = useStore((s) => s.themeMode);
   const monoFontFamily = useStore((s) => s.monoFontFamily);
   const editorFontSize = useStore((s) => s.editorFontSize);
+  const jumpToLineRequest = useStore((s) => s.jumpToLineRequest);
+  const setJumpToLineRequest = useStore((s) => s.setJumpToLineRequest);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof Monaco | null>(null);
   const decorationsRef = useRef<string[]>([]);
@@ -119,6 +121,18 @@ export function EditorPanel() {
     ed.revealLineInCenter(currentLine, 1);
   }, [currentLine]);
 
+  // Jump to a specific line when requested (e.g. from error/breakpoint panels)
+  useEffect(() => {
+    if (jumpToLineRequest == null) return;
+    const ed = editorRef.current;
+    if (ed) {
+      ed.revealLineInCenter(jumpToLineRequest, 1);
+      ed.setPosition({ lineNumber: jumpToLineRequest, column: 1 });
+      ed.focus();
+    }
+    setJumpToLineRequest(null);
+  }, [jumpToLineRequest, setJumpToLineRequest]);
+
   return (
     <div className="panel editor-panel" data-tour="editor">
       <div className="editor-tab-strip">
@@ -191,6 +205,11 @@ export function EditorPanel() {
             smoothScrolling: true,
             cursorBlinking: "smooth",
             padding: { top: 8, bottom: 12 },
+            find: {
+              addExtraSpaceOnTop: false,
+              autoFindInSelection: "never",
+              seedSearchStringFromSelection: "always",
+            },
           }}
         />
       </div>

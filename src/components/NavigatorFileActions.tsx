@@ -59,11 +59,22 @@ function IconSamples() {
   );
 }
 
+function IconExport() {
+  return (
+    <svg className="activity-bar-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  );
+}
+
 /** File actions in the activity bar (navigator), not the top navbar */
 export function NavigatorFileActions() {
   const saveFile = useStore((s) => s.saveFile);
   const loadFile = useStore((s) => s.loadFile);
   const newFile = useStore((s) => s.newFile);
+  const exportAsm = useStore((s) => s.exportAsm);
   const arch = useStore((s) => s.arch);
   const setSource = useStore((s) => s.setSource);
   const [sampleOpen, setSampleOpen] = useState(false);
@@ -173,6 +184,18 @@ export function NavigatorFileActions() {
           <IconSave />
         </span>
         <span className="activity-bar-label">Save</span>
+      </button>
+      <button
+        type="button"
+        className="activity-bar-btn activity-bar-btn--icon"
+        onClick={exportAsm}
+        title="Export as .asm file"
+        aria-label="Export .asm"
+      >
+        <span className="activity-bar-icon-wrap" aria-hidden>
+          <IconExport />
+        </span>
+        <span className="activity-bar-label">Export</span>
       </button>
       <div className="activity-bar-flyout-wrap" ref={wrapRef}>
         <button
