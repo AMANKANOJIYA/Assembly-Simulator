@@ -1,13 +1,14 @@
 import { useStore } from "../store";
 import type { TraceEvent } from "../types";
 
+// Colors match the Pipeline Timing Gantt stage palette exactly
 const EVENT_META: Record<TraceEvent, { label: string; color: string; bg: string }> = {
-  FETCH:     { label: "FETCH",     color: "#60a5fa", bg: "rgba(59,130,246,0.12)"  },
-  DECODE:    { label: "DECODE",    color: "#a78bfa", bg: "rgba(139,92,246,0.12)"  },
-  ALU:       { label: "ALU",       color: "#34d399", bg: "rgba(16,185,129,0.12)"  },
-  MEM:       { label: "MEM",       color: "#fbbf24", bg: "rgba(245,158,11,0.12)"  },
-  REG_WRITE: { label: "REG_WRITE", color: "#22d3ee", bg: "rgba(6,182,212,0.12)"   },
-  HALTED:    { label: "HALTED",    color: "#f87171", bg: "rgba(239,68,68,0.12)"   },
+  FETCH:     { label: "FETCH",     color: "#6366f1", bg: "rgba(99,102,241,0.15)"  },
+  DECODE:    { label: "DECODE",    color: "#22c55e", bg: "rgba(34,197,94,0.15)"   },
+  ALU:       { label: "ALU",       color: "#f59e0b", bg: "rgba(245,158,11,0.15)"  },
+  MEM:       { label: "MEM",       color: "#ec4899", bg: "rgba(236,72,153,0.15)"  },
+  REG_WRITE: { label: "REG_WRITE", color: "#3b82f6", bg: "rgba(59,130,246,0.15)"  },
+  HALTED:    { label: "HALTED",    color: "#ef4444", bg: "rgba(239,68,68,0.15)"   },
 };
 
 function EventBadge({ event }: { event: TraceEvent }) {
