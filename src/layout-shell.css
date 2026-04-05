@@ -1674,10 +1674,13 @@ html[data-ui-density="compact"] .vscode-settings-main {
   padding: 16px 18px 18px;
   flex: 1;
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   background: var(--app-bg);
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-scrollbar) transparent;
 }
 
 .cycle-graph-empty {
@@ -2324,6 +2327,7 @@ html[data-ui-density="compact"] .vscode-settings-main {
 .gantt-raw-section {
   flex-shrink: 0;
   margin-top: 10px;
+  min-height: 0;
 }
 
 .gantt-collapse-btn {
@@ -2351,9 +2355,13 @@ html[data-ui-density="compact"] .vscode-settings-main {
 /* Shared cycle table */
 .cycle-table-wrap {
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: 320px;
   margin-top: 6px;
   border: 1px solid var(--app-border-subtle);
   border-radius: var(--radius-tool);
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-scrollbar) transparent;
 }
 
 .cycle-table {
@@ -2364,6 +2372,9 @@ html[data-ui-density="compact"] .vscode-settings-main {
 }
 
 .cycle-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   background: var(--app-surface-elevated);
   padding: 7px 12px;
   text-align: left;
