@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useStore } from "../store";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -28,6 +28,16 @@ export function MemoryPanel() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [expandedChunk, setExpandedChunk] = useState<number | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const jumpScrollTimerRef = useRef<number | null>(null);
+
+  // Clear any pending scroll timer on unmount
+  useEffect(() => {
+    return () => {
+      if (jumpScrollTimerRef.current != null) {
+        clearTimeout(jumpScrollTimerRef.current);
+      }
+    };
+  }, []);
 
   const memory = snapshot?.memory ?? [];
   const size = snapshot?.memory_size ?? memorySize;
@@ -90,7 +100,9 @@ export function MemoryPanel() {
       if (useChunkView) {
         const chunkIdx = Math.floor(parsed / CHUNK_SIZE);
         setExpandedChunk(chunkIdx);
-        setTimeout(() => {
+        if (jumpScrollTimerRef.current != null) clearTimeout(jumpScrollTimerRef.current);
+        jumpScrollTimerRef.current = window.setTimeout(() => {
+          jumpScrollTimerRef.current = null;
           const rowAddr = Math.floor(parsed / BYTES_PER_ROW) * BYTES_PER_ROW;
           const rowEl = scrollContainerRef.current?.querySelector(`[data-addr="${rowAddr}"]`);
           rowEl?.scrollIntoView({ behavior: "smooth", block: "center" });

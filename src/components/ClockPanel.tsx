@@ -8,6 +8,8 @@ const PAD = 20;
 const WAVE_LOW_Y = 36;
 const WAVE_HIGH_Y = 8;
 const CYCLE_WIDTH = PULSE_WIDTH + GAP;
+// Cap displayed history to prevent rendering thousands of SVG/table nodes
+const MAX_DISPLAY_HISTORY = 500;
 
 function formatTimeNs(ns: number): string {
   if (ns >= 1e6) return `${(ns / 1e6).toFixed(2)} ms`;
@@ -32,7 +34,11 @@ export function ClockPanel() {
   const cycles = snapshot?.total_cycles ?? 0;
   const runState = snapshot?.run_state ?? "IDLE";
 
-  const history = cycleHistory;
+  // Only render the most recent MAX_DISPLAY_HISTORY entries to keep the UI responsive
+  const history = cycleHistory.length > MAX_DISPLAY_HISTORY
+    ? cycleHistory.slice(-MAX_DISPLAY_HISTORY)
+    : cycleHistory;
+  const historyTruncated = cycleHistory.length > MAX_DISPLAY_HISTORY;
   const totalWidth = history.length ? history.length * CYCLE_WIDTH : 100;
   const timePerCycleNs = 1000 / clockMHz;
 
@@ -202,6 +208,11 @@ export function ClockPanel() {
 
                   <div className="cycle-wave-toolbar">
                     <span className="cycle-graph-hint-inline">Click a pulse or table row to highlight. Esc closes.</span>
+                    {historyTruncated && (
+                      <span className="cycle-graph-hint-inline cycle-graph-hint-truncated">
+                        Showing last {MAX_DISPLAY_HISTORY} of {cycleHistory.length} steps. Export CSV for full data.
+                      </span>
+                    )}
                   </div>
 
                   <div className="cycle-wave-scroll">

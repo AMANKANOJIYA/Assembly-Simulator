@@ -5,7 +5,7 @@ import { getDefaultSample } from "../samples";
 export function HelpPanel() {
   const helpOpen = useStore((s) => s.helpOpen);
   const setHelpOpen = useStore((s) => s.setHelpOpen);
-  const setOnboardingOpen = useStore((s) => (s as any).setOnboardingOpen as (v: boolean) => void);
+  const setOnboardingOpen = useStore((s) => s.setOnboardingOpen);
   const setToast = useStore((s) => s.setToast);
   const arch = useStore((s) => s.arch);
 

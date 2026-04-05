@@ -1,5 +1,10 @@
 import { useStore } from "../store";
 
+function fileBaseName(path: string): string {
+  const parts = path.split(/[/\\]/);
+  return parts[parts.length - 1] ?? path;
+}
+
 /** Highlights execution state: PC, run mode, I/O wait, halt */
 export function StatusStrip() {
   const snapshot = useStore((s) => s.snapshot);
@@ -15,12 +20,13 @@ export function StatusStrip() {
   if (!snapshot) {
     return (
       <div className="status-strip" role="status">
-        {activeFilePath && (
+        {activeFilePath ? (
           <span className="status-strip-file" title={activeFilePath}>
-            {activeFilePath.split(/[/\\]/).pop()}
+            {fileBaseName(activeFilePath)}
           </span>
+        ) : (
+          <span className="status-strip-muted">{activeTitle}</span>
         )}
-        {!activeFilePath && <span className="status-strip-muted">{activeTitle}</span>}
         <span className="status-strip-muted">No simulator state — assemble to connect</span>
       </div>
     );
@@ -34,11 +40,11 @@ export function StatusStrip() {
 
   return (
     <div className="status-strip" role="status" aria-live="polite">
-      {activeFilePath || activeTitle ? (
+      {(activeFilePath || activeTitle) && (
         <span className="status-strip-file" title={activeFilePath ?? activeTitle}>
-          {activeFilePath ? activeFilePath.split(/[/\\]/).pop() : activeTitle}
+          {activeFilePath ? fileBaseName(activeFilePath) : activeTitle}
         </span>
-      ) : null}
+      )}
       <span className="status-chip status-chip--mono" title="Program counter">
         PC <strong>0x{pc.toString(16).toUpperCase().padStart(8, "0")}</strong>
       </span>
