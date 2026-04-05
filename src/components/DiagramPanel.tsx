@@ -1,4 +1,5 @@
 import { useRef, useCallback, useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useStore } from "../store";
 import type { TraceEvent } from "../types";
 
@@ -491,57 +492,52 @@ export function DiagramPanel() {
         <div className="diagram-hint">▼/▲ resize · ⊞ full screen circuit diagram</div>
       </div>
 
-      {archExpanded && (
+      {archExpanded && createPortal(
         <div className="arch-expanded-overlay" onClick={() => { setArchExpanded(false); setZoom(1); setPan({ x: 0, y: 0 }); }}>
           <div className="arch-expanded-content hw-expanded-content" onClick={e => e.stopPropagation()}>
-
-            {/* SVG fills entire modal; floating controls sit on top */}
-            <div style={{ position: "relative", flex: 1, minHeight: 0, overflow: "hidden" }}>
-              <div ref={containerRef} className="arch-expanded-svg arch-zoom-pan-container">
-                <ExpandedDiagram
-                  activeBlocks={ab} activeWires={aw}
-                  isPanning={isPanning} svgRef={svgRef}
-                  viewBox={viewBox} onBgMouseDown={handleBgMouseDown} />
-              </div>
-
-              {/* Floating control bar — always visible over the diagram */}
-              <div className="hw-float-controls">
-                {/* Title */}
-                <span className="hw-float-title">RV32I — Single-Cycle Datapath</span>
-
-                {/* Active event pills */}
-                {traceEvents.length > 0 && (
-                  <span className="hw-float-pills">
-                    {traceEvents.map((ev, i) => {
-                      const stage: StageName = (BLOCK_STAGE[(EV_BLOCKS[ev] ?? [])[0]] ?? "IF") as StageName;
-                      const pal = STAGE_PALETTE[stage];
-                      return (
-                        <span key={i} className="hw-float-pill"
-                          style={{ background: pal.bg, color: pal.color, border: `1px solid ${pal.color}55` }}>{ev}</span>
-                      );
-                    })}
-                  </span>
-                )}
-
-                <span className="hw-float-sep" />
-
-                {/* Zoom controls */}
-                <button type="button" className="hw-float-btn" title="Zoom out" onClick={() => setZoom(z => Math.max(MIN_ZOOM, z - ZOOM_STEP))}>−</button>
-                <span className="hw-float-zoom">{Math.round(zoom * 100)}%</span>
-                <button type="button" className="hw-float-btn" title="Zoom in"  onClick={() => setZoom(z => Math.min(MAX_ZOOM, z + ZOOM_STEP))}>+</button>
-                <button type="button" className="hw-float-btn" title="Fit to screen" onClick={handleFit}>⊡ Fit</button>
-                <button type="button" className="hw-float-btn" title="Reset zoom & pan" onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}>↺</button>
-
-                {/* Close */}
-                <button type="button" className="hw-float-close" title="Close (Esc)"
-                  onClick={() => { setArchExpanded(false); setZoom(1); setPan({ x: 0, y: 0 }); }}>
-                  ✕ Close
-                </button>
-              </div>
+            <div ref={containerRef} className="arch-expanded-svg arch-zoom-pan-container">
+              <ExpandedDiagram
+                activeBlocks={ab} activeWires={aw}
+                isPanning={isPanning} svgRef={svgRef}
+                viewBox={viewBox} onBgMouseDown={handleBgMouseDown} />
             </div>
-
           </div>
-        </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Floating controls — own portal so overflow:hidden on anything can't clip it */}
+      {archExpanded && createPortal(
+        <div className="hw-float-controls">
+          <span className="hw-float-title">RV32I — Single-Cycle Datapath</span>
+
+          {traceEvents.length > 0 && (
+            <span className="hw-float-pills">
+              {traceEvents.map((ev, i) => {
+                const stage: StageName = (BLOCK_STAGE[(EV_BLOCKS[ev] ?? [])[0]] ?? "IF") as StageName;
+                const pal = STAGE_PALETTE[stage];
+                return (
+                  <span key={i} className="hw-float-pill"
+                    style={{ background: pal.bg, color: pal.color, border: `1px solid ${pal.color}55` }}>{ev}</span>
+                );
+              })}
+            </span>
+          )}
+
+          <span className="hw-float-sep" />
+
+          <button type="button" className="hw-float-btn" title="Zoom out" onClick={() => setZoom(z => Math.max(MIN_ZOOM, z - ZOOM_STEP))}>−</button>
+          <span className="hw-float-zoom">{Math.round(zoom * 100)}%</span>
+          <button type="button" className="hw-float-btn" title="Zoom in"  onClick={() => setZoom(z => Math.min(MAX_ZOOM, z + ZOOM_STEP))}>+</button>
+          <button type="button" className="hw-float-btn" title="Fit to screen" onClick={handleFit}>⊡ Fit</button>
+          <button type="button" className="hw-float-btn" title="Reset zoom & pan" onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}>↺</button>
+
+          <button type="button" className="hw-float-close" title="Close (Esc)"
+            onClick={() => { setArchExpanded(false); setZoom(1); setPan({ x: 0, y: 0 }); }}>
+            ✕ Close
+          </button>
+        </div>,
+        document.body
       )}
     </>
   );
