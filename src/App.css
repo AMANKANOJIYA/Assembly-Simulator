@@ -588,16 +588,15 @@
   top: 12px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 10;
+  z-index: 100;
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 6px 14px;
   border-radius: 10px;
-  background: color-mix(in srgb, var(--app-surface-elevated) 88%, transparent);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--app-border);
-  box-shadow: 0 4px 18px rgba(0,0,0,0.35);
+  background: var(--app-surface-elevated, #1e2030);
+  border: 1.5px solid var(--app-border, rgba(255,255,255,0.15));
+  box-shadow: 0 6px 24px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04);
   flex-wrap: nowrap;
   white-space: nowrap;
 }

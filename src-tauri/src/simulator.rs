@@ -45,6 +45,8 @@ pub struct UndoSnapshot {
     pub cycles_added: u64,
     /// Number of chars appended to io_output by this step (for step-back undo)
     pub io_output_len: usize,
+    /// Trace events that were active BEFORE this step (restored on step_back)
+    pub prev_trace_events: Vec<TraceEvent>,
 }
 
 impl Simulator {
@@ -196,12 +198,13 @@ impl Simulator {
         }
         self.pending_input_request = None;
         let io_output_len = result.io_output.as_ref().map(|s| s.len()).unwrap_or(0);
-        // Push undo snapshot before applying
+        // Push undo snapshot before applying (save current trace_events so step_back can restore them)
         self.undo_stack.push(UndoSnapshot {
             state: self.state.clone(),
             undo_log: result.undo_log.clone(),
             cycles_added: result.cycles_added,
             io_output_len,
+            prev_trace_events: self.trace_events.clone(),
         });
         self.apply_undo_forward(&result.undo_log);
         self.state = result.new_state.clone();
@@ -234,6 +237,7 @@ impl Simulator {
         self.state = snapshot.state.clone();
         self.apply_undo_reverse(&snapshot.undo_log);
         self.total_cycles = self.total_cycles.saturating_sub(snapshot.cycles_added);
+        self.trace_events = snapshot.prev_trace_events.clone();
         let trunc = self.cycle_details.len().saturating_sub(snapshot.cycles_added as usize);
         self.cycle_details.truncate(trunc);
         if snapshot.io_output_len > 0 && self.io_output.len() >= snapshot.io_output_len {
