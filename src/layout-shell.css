@@ -2137,8 +2137,8 @@ html[data-ui-density="compact"] .vscode-settings-main {
 /* Gantt chart wrapper */
 .gantt-wrap {
   display: flex;
-  flex: 1;
-  min-height: 0;
+  flex-shrink: 0;
+  height: 240px;
   overflow: hidden;
   position: relative;
   border: 1px solid var(--app-border-subtle);
