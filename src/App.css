@@ -582,45 +582,88 @@
   display: flex;
   flex-direction: column;
 }
-.arch-expanded-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 12px 18px;
-  border-bottom: 1px solid var(--app-border-subtle);
-  background: var(--app-surface-elevated);
-  flex-shrink: 0;
-}
-.arch-expanded-header h3 {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--app-fg);
-}
-.arch-expanded-controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.arch-zoom-controls {
+/* Floating control bar — positioned over SVG, always visible */
+.hw-float-controls {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
   display: flex;
   align-items: center;
   gap: 6px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--app-surface-elevated) 88%, transparent);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--app-border);
+  box-shadow: 0 4px 18px rgba(0,0,0,0.35);
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
-.arch-zoom-controls .btn-small {
-  width: 32px;
-  padding: 4px;
-  font-size: 1rem;
-  line-height: 1;
+.hw-float-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--app-fg);
+  letter-spacing: 0.01em;
+  margin-right: 4px;
 }
-.arch-zoom-value {
-  font-size: 0.85rem;
-  min-width: 48px;
+.hw-float-pills {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.hw-float-pill {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+.hw-float-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--app-border);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+.hw-float-btn {
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 6px;
+  border: 1px solid var(--app-border);
+  background: var(--app-surface);
+  color: var(--app-fg);
+  cursor: pointer;
+  line-height: 1.4;
+  transition: background 0.12s, border-color 0.12s;
+}
+.hw-float-btn:hover {
+  background: var(--app-surface-elevated);
+  border-color: var(--app-fg-muted);
+}
+.hw-float-zoom {
+  font-size: 0.8rem;
+  min-width: 40px;
   text-align: center;
   color: var(--app-fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+.hw-float-close {
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 3px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--app-border);
+  background: rgba(239,68,68,0.12);
+  color: #ef4444;
+  cursor: pointer;
+  line-height: 1.4;
+  transition: background 0.12s;
+  margin-left: 4px;
+}
+.hw-float-close:hover {
+  background: rgba(239,68,68,0.22);
 }
 .arch-expanded-svg {
   flex: 1;
@@ -639,14 +682,6 @@
   width: 100%;
   height: 100%;
   display: block;
-}
-.arch-expanded-hint {
-  padding: 6px 18px;
-  font-size: 0.72rem;
-  color: var(--app-fg-dim);
-  border-top: 1px solid var(--app-border-subtle);
-  background: var(--app-surface-elevated);
-  flex-shrink: 0;
 }
 
 /* Compact diagram panel — expandable height */

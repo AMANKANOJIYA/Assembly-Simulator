@@ -210,23 +210,36 @@ function ExpandedDiagram({ activeBlocks: ab, activeWires: aw, isPanning, svgRef,
   svgRef: React.RefObject<SVGSVGElement | null>; viewBox: string;
   onBgMouseDown: (e: React.MouseEvent) => void;
 }) {
-  const r = (b: { x: number; y: number; w: number; h: number }, fy = 0.5) => ({ x: b.x + b.w, y: b.y + b.h * fy });
-  const l = (b: { x: number; y: number; w: number; h: number }, fy = 0.5) => ({ x: b.x,       y: b.y + b.h * fy });
-  const t = (b: { x: number; y: number; w: number; h: number }, fx = 0.5) => ({ x: b.x + b.w * fx, y: b.y });
-  const b = (bk: { x: number; y: number; w: number; h: number }, fx = 0.5) => ({ x: bk.x + bk.w * fx, y: bk.y + bk.h });
+  // G = gap between wire endpoint and block face so arrowhead doesn't overlap border
+  const G = 9;
+  type R = { x: number; y: number; w: number; h: number };
 
+  // Source ports (wire starts here — no gap needed)
+  const fromR = (b: R, fy = 0.5) => ({ x: b.x + b.w,      y: b.y + b.h * fy });
+  const fromB = (b: R, fx = 0.5) => ({ x: b.x + b.w * fx, y: b.y + b.h      });
+
+  // Target ports (wire ends here — gap so arrowhead clears the block border)
+  const toL   = (b: R, fy = 0.5) => ({ x: b.x - G,         y: b.y + b.h * fy });
+  const toT   = (b: R, fx = 0.5) => ({ x: b.x + b.w * fx,  y: b.y - G        });
+  const toR   = (b: R, fy = 0.5) => ({ x: b.x + b.w + G,   y: b.y + b.h * fy });
+
+  // ALU chevron input ports (at the notch — no extra gap needed, the notch is recessed)
   const aluInA = { x: E.alu.x + E.alu.w * 0.28, y: E.alu.y + E.alu.h * 0.28 };
   const aluInB = { x: E.alu.x + E.alu.w * 0.28, y: E.alu.y + E.alu.h * 0.72 };
-  const aluOut = r(E.alu);
-  const muxIn0 = l(E.mux, 0.28);
-  const muxIn1 = l(E.mux, 0.72);
-  const muxOut = r(E.mux, 0.5);
+  const aluOut = fromR(E.alu);
+  // MUX trapezoid — left face is at x=E.mux.x, add G inset
+  const muxIn0 = { x: E.mux.x - G, y: E.mux.y + E.mux.h * 0.28 };
+  const muxIn1 = { x: E.mux.x - G, y: E.mux.y + E.mux.h * 0.72 };
+  const muxOut = fromR(E.mux, 0.5);
 
-  const SF = "-exp"; // marker suffix for expanded
+  const SF = "-exp";
 
   function PL({ x, y, text, a = "start" }: { x: number; y: number; text: string; a?: "start" | "end" | "middle" }) {
     return <text x={x} y={y} textAnchor={a} className="hw-port-label">{text}</text>;
   }
+
+  // Control unit output x-positions
+  const ctrl = E.control;
 
   return (
     <svg ref={svgRef} viewBox={viewBox}
@@ -234,11 +247,12 @@ function ExpandedDiagram({ activeBlocks: ab, activeWires: aw, isPanning, svgRef,
       preserveAspectRatio="xMidYMid meet"
       style={{ cursor: isPanning ? "grabbing" : "default" }}>
       <defs>
-        <marker id={`hw-arrow${SF}`} markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-          <path d="M0,0 L6,3 L0,6 Z" className="hw-arrow-head" />
+        {/* Tip at x=8, refX=8 → tip lands exactly at path endpoint */}
+        <marker id={`hw-arrow${SF}`} markerWidth="8" markerHeight="7" refX="8" refY="3.5" orient="auto">
+          <path d="M0,0 L8,3.5 L0,7 Z" className="hw-arrow-head" />
         </marker>
         <filter id="hw-glow-e" x="-40%" y="-40%" width="180%" height="180%">
-          <feGaussianBlur stdDeviation="4" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+          <feGaussianBlur stdDeviation="4" result="bl" /><feMerge><feMergeNode in="bl" /><feMergeNode in="SourceGraphic" /></feMerge>
         </filter>
       </defs>
 
@@ -250,87 +264,87 @@ function ExpandedDiagram({ activeBlocks: ab, activeWires: aw, isPanning, svgRef,
         <g key={z.key}>
           <rect x={z.x} y={18} width={z.w} height={E.H - 26} fill={z.bg} />
           <text x={z.x + z.w / 2} y={36} textAnchor="middle" className="hw-stage-label-exp" style={{ fill: z.color }}>{z.label}</text>
-          <line x1={z.x + z.w} y1={18} x2={z.x + z.w} y2={E.H - 8} stroke={z.color} strokeWidth={1} strokeDasharray="4 4" opacity={0.25} />
+          <line x1={z.x + z.w} y1={18} x2={z.x + z.w} y2={E.H - 8} stroke={z.color} strokeWidth={1} strokeDasharray="4 4" opacity={0.22} />
         </g>
       ))}
 
-      {/* ── Wires ──────────────────────────────────────────────────────── */}
-      {/* PC → IM */}
-      <HwWire markerSuffix={SF} type="addr"
-        d={`M${r(E.pc).x},${r(E.pc).y} L${l(E.im, 0.28).x},${l(E.im, 0.28).y}`}
-        active={aw.has("pc-im")} label="PC[31:0]" labelX={152} labelY={286} />
-      {/* IM → IR */}
-      <HwWire markerSuffix={SF} type="data"
-        d={`M${r(E.im).x},${r(E.im, 0.24).y} L${l(E.ir).x},${l(E.ir).y}`}
-        active={aw.has("im-ir")} label="Instr[31:0]" labelX={282} labelY={224} />
-      {/* IR → RegFile (read addrs) */}
-      <HwWire markerSuffix={SF} type="addr"
-        d={`M${b(E.ir, 0.34).x},${b(E.ir, 0.34).y} L${t(E.regfile, 0.34).x},${t(E.regfile, 0.34).y}`}
-        active={aw.has("ir-rf")} label="rs1,rs2" labelX={366} labelY={322} />
-      {/* IR → Control */}
-      <HwWire markerSuffix={SF} type="control"
-        d={`M${b(E.ir, 0.72).x},${b(E.ir, 0.72).y} L${b(E.ir, 0.72).x},${E.control.y} L${E.control.x + E.control.w * 0.42},${E.control.y}`}
-        active={aw.has("ir-ctrl")} label="opcode" labelX={445} labelY={524} />
-      {/* RegFile → ALU A */}
-      <HwWire markerSuffix={SF} type="data"
-        d={`M${r(E.regfile, 0.26).x},${r(E.regfile, 0.26).y} L${aluInA.x},${aluInA.y}`}
-        active={aw.has("rf-alu-a")} label="A" labelX={540} labelY={374} />
-      {/* RegFile → ALU B */}
-      <HwWire markerSuffix={SF} type="data"
-        d={`M${r(E.regfile, 0.74).x},${r(E.regfile, 0.74).y} L${aluInB.x},${aluInB.y}`}
-        active={aw.has("rf-alu-b")} label="B" labelX={540} labelY={452} />
-      {/* IR → ALU (Imm sign-ext) */}
-      <HwWire markerSuffix={SF} type="control"
-        d={`M${r(E.ir).x},${r(E.ir).y} L${aluInA.x},${aluInA.y - 10}`}
-        active={aw.has("ir-alu")} label="Imm" labelX={516} labelY={238} />
-      {/* Control → ALU ctrl */}
-      <HwWire markerSuffix={SF} type="control"
-        d={`M${E.control.x + E.control.w * 0.6},${E.control.y} L${E.control.x + E.control.w * 0.6},${aluInB.y + 28} L${aluInB.x},${aluInB.y + 28}`}
-        active={aw.has("ir-ctrl")} label="ALUctrl" labelX={612} labelY={542} />
-      {/* Control → RegFile */}
-      <HwWire markerSuffix={SF} type="control"
-        d={`M${E.control.x + E.control.w * 0.33},${E.control.y} L${E.control.x + E.control.w * 0.33},${r(E.regfile, 0.92).y} L${r(E.regfile, 0.92).x},${r(E.regfile, 0.92).y}`}
-        active={aw.has("ir-ctrl")} label="RegWr" labelX={282} labelY={542} />
-      {/* ALU → DM addr */}
-      <HwWire markerSuffix={SF} type="addr"
-        d={`M${aluOut.x},${aluOut.y} L${l(E.dm, 0.28).x},${l(E.dm, 0.28).y}`}
-        active={aw.has("alu-dm")} label="Addr" labelX={750} labelY={290} />
-      {/* Control → DM */}
-      <HwWire markerSuffix={SF} type="control"
-        d={`M${E.control.x + E.control.w * 0.73},${E.control.y} L${E.control.x + E.control.w * 0.73},${l(E.dm, 0.74).y} L${l(E.dm, 0.74).x},${l(E.dm, 0.74).y}`}
-        active={aw.has("ir-ctrl")} label="MemR/W" labelX={808} labelY={542} />
-      {/* DM → MUX */}
-      <HwWire markerSuffix={SF} type="data"
-        d={`M${r(E.dm, 0.5).x},${r(E.dm, 0.5).y} L${muxIn1.x},${muxIn1.y}`}
-        active={aw.has("dm-mux")} label="RData" labelX={982} labelY={386} />
-      {/* ALU → MUX (bypass over DM) */}
-      <HwWire markerSuffix={SF} type="data"
-        d={`M${aluOut.x},${aluOut.y - 22} L${muxIn0.x + 2},${aluOut.y - 22} L${muxIn0.x},${muxIn0.y}`}
-        active={aw.has("alu-mux")} label="Result" labelX={980} labelY={214} />
-      {/* MUX → RegFile (writeback) */}
-      <HwWire markerSuffix={SF} type="data"
-        d={`M${muxOut.x},${muxOut.y} L${E.W - 28},${muxOut.y} L${E.W - 28},${E.H - 18} L${t(E.regfile, 0.72).x},${E.H - 18} L${t(E.regfile, 0.72).x},${t(E.regfile, 0.72).y}`}
-        active={aw.has("mux-rf")} label="WData" labelX={1260} labelY={372} />
-      {/* Control → PC */}
-      <HwWire markerSuffix={SF} type="control"
-        d={`M${E.control.x + E.control.w * 0.11},${E.control.y} L${E.control.x + E.control.w * 0.11},${r(E.pc, 0.84).y} L${r(E.pc, 0.84).x},${r(E.pc, 0.84).y}`}
-        active={aw.has("ctrl-pc")} />
+      {/* ── Wires (all endpoints offset by G from block faces) ─────────── */}
+
+      {/* PC → IM: address */}
+      <HwWire markerSuffix={SF} type="addr" active={aw.has("pc-im")} label="PC[31:0]" labelX={152} labelY={283}
+        d={`M${fromR(E.pc).x},${fromR(E.pc).y} L${toL(E.im, 0.28).x},${toL(E.im, 0.28).y}`} />
+
+      {/* IM → IR: instruction word */}
+      <HwWire markerSuffix={SF} type="data" active={aw.has("im-ir")} label="Instr[31:0]" labelX={284} labelY={222}
+        d={`M${fromR(E.im, 0.24).x},${fromR(E.im, 0.24).y} L${toL(E.ir).x},${toL(E.ir).y}`} />
+
+      {/* IR → RegFile: rs1/rs2 read addresses */}
+      <HwWire markerSuffix={SF} type="addr" active={aw.has("ir-rf")} label="rs1, rs2" labelX={372} labelY={320}
+        d={`M${fromB(E.ir, 0.34).x},${fromB(E.ir, 0.34).y} L${toT(E.regfile, 0.34).x},${toT(E.regfile, 0.34).y}`} />
+
+      {/* IR → Control: opcode */}
+      <HwWire markerSuffix={SF} type="control" active={aw.has("ir-ctrl")} label="opcode" labelX={448} labelY={522}
+        d={`M${fromB(E.ir, 0.72).x},${fromB(E.ir, 0.72).y} L${fromB(E.ir, 0.72).x},${ctrl.y - G} L${ctrl.x + ctrl.w * 0.42},${ctrl.y - G}`} />
+
+      {/* RegFile → ALU: operand A */}
+      <HwWire markerSuffix={SF} type="data" active={aw.has("rf-alu-a")} label="A" labelX={540} labelY={372}
+        d={`M${fromR(E.regfile, 0.26).x},${fromR(E.regfile, 0.26).y} L${aluInA.x},${aluInA.y}`} />
+
+      {/* RegFile → ALU: operand B */}
+      <HwWire markerSuffix={SF} type="data" active={aw.has("rf-alu-b")} label="B" labelX={540} labelY={450}
+        d={`M${fromR(E.regfile, 0.74).x},${fromR(E.regfile, 0.74).y} L${aluInB.x},${aluInB.y}`} />
+
+      {/* IR → ALU: immediate (sign-extended) */}
+      <HwWire markerSuffix={SF} type="control" active={aw.has("ir-alu")} label="Imm" labelX={516} labelY={234}
+        d={`M${fromR(E.ir).x},${fromR(E.ir).y} L${aluInA.x},${aluInA.y - 12}`} />
+
+      {/* Control → ALU: ALU control signals */}
+      <HwWire markerSuffix={SF} type="control" active={aw.has("ir-ctrl")} label="ALUctrl" labelX={614} labelY={540}
+        d={`M${ctrl.x + ctrl.w * 0.60},${ctrl.y} L${ctrl.x + ctrl.w * 0.60},${aluInB.y + 30} L${aluInB.x},${aluInB.y + 30}`} />
+
+      {/* Control → RegFile: RegWrite */}
+      <HwWire markerSuffix={SF} type="control" active={aw.has("ir-ctrl")} label="RegWr" labelX={286} labelY={540}
+        d={`M${ctrl.x + ctrl.w * 0.33},${ctrl.y} L${ctrl.x + ctrl.w * 0.33},${toR(E.regfile, 0.92).y} L${toR(E.regfile, 0.92).x},${toR(E.regfile, 0.92).y}`} />
+
+      {/* ALU → DM: address */}
+      <HwWire markerSuffix={SF} type="addr" active={aw.has("alu-dm")} label="Addr" labelX={752} labelY={288}
+        d={`M${aluOut.x},${aluOut.y} L${toL(E.dm, 0.28).x},${toL(E.dm, 0.28).y}`} />
+
+      {/* Control → DM: MemRead/Write */}
+      <HwWire markerSuffix={SF} type="control" active={aw.has("ir-ctrl")} label="MemR/W" labelX={810} labelY={540}
+        d={`M${ctrl.x + ctrl.w * 0.73},${ctrl.y} L${ctrl.x + ctrl.w * 0.73},${toL(E.dm, 0.74).y} L${toL(E.dm, 0.74).x},${toL(E.dm, 0.74).y}`} />
+
+      {/* DM → MUX: read data */}
+      <HwWire markerSuffix={SF} type="data" active={aw.has("dm-mux")} label="RData" labelX={984} labelY={384}
+        d={`M${fromR(E.dm, 0.5).x},${fromR(E.dm, 0.5).y} L${muxIn1.x},${muxIn1.y}`} />
+
+      {/* ALU → MUX: result (bypass over DM) */}
+      <HwWire markerSuffix={SF} type="data" active={aw.has("alu-mux")} label="Result" labelX={982} labelY={212}
+        d={`M${aluOut.x},${aluOut.y - 24} L${muxIn0.x},${aluOut.y - 24} L${muxIn0.x},${muxIn0.y}`} />
+
+      {/* MUX → RegFile: write-back data */}
+      <HwWire markerSuffix={SF} type="data" active={aw.has("mux-rf")} label="WData" labelX={1262} labelY={370}
+        d={`M${muxOut.x},${muxOut.y} L${E.W - 26},${muxOut.y} L${E.W - 26},${E.H - 16} L${toT(E.regfile, 0.72).x},${E.H - 16} L${toT(E.regfile, 0.72).x},${toT(E.regfile, 0.72).y}`} />
+
+      {/* Control → PC: PC enable / branch */}
+      <HwWire markerSuffix={SF} type="control" active={aw.has("ctrl-pc")}
+        d={`M${ctrl.x + ctrl.w * 0.11},${ctrl.y} L${ctrl.x + ctrl.w * 0.11},${toR(E.pc, 0.84).y} L${toR(E.pc, 0.84).x},${toR(E.pc, 0.84).y}`} />
 
       {/* ── Blocks ─────────────────────────────────────────────────────── */}
       <HwRect {...E.pc}      id="pc"      active={ab.has("pc")}      stageColor={STAGE_PALETTE.IF.color}  label="PC"                              />
       <HwRect {...E.im}      id="im"      active={ab.has("im")}      stageColor={STAGE_PALETTE.IF.color}  label="Instruction Memory"  rows={9}    />
       <HwRect {...E.ir}      id="ir"      active={ab.has("ir")}      stageColor={STAGE_PALETTE.ID.color}  label="Instruction Register"            />
-      <HwRect {...E.regfile} id="regfile" active={ab.has("regfile")} stageColor={STAGE_PALETTE.EX.color}  label="Register File" sublabel="x0–x31 (32 × 32-bit)" rows={8} />
+      <HwRect {...E.regfile} id="regfile" active={ab.has("regfile")} stageColor={STAGE_PALETTE.EX.color}  label="Register File" sublabel="x0 – x31 (32 × 32-bit)" rows={8} />
       <HwAlu  {...E.alu}     active={ab.has("alu")} />
       <HwRect {...E.dm}      id="dm"      active={ab.has("dm")}      stageColor={STAGE_PALETTE.MEM.color} label="Data Memory"          rows={9}    />
       <HwMux  {...E.mux}     active={ab.has("mux")} />
       <HwRect {...E.control} id="control" active={ab.has("control")} stageColor={STAGE_PALETTE.ID.color}  label="Control Unit"         rx={14}     />
 
-      {/* ── IR bit fields ─────────────────────────────────────────────── */}
+      {/* ── IR bit-field dividers ──────────────────────────────────────── */}
       {[
-        { label: "opcode", x: 0.05 }, { label: "rd",      x: 0.22 },
-        { label: "funct3", x: 0.36 }, { label: "rs1",     x: 0.52 },
-        { label: "rs2",    x: 0.66 }, { label: "funct7",  x: 0.80 },
+        { label: "opcode", x: 0.05 }, { label: "rd",     x: 0.22 },
+        { label: "funct3", x: 0.36 }, { label: "rs1",    x: 0.52 },
+        { label: "rs2",    x: 0.66 }, { label: "funct7", x: 0.80 },
       ].map(({ label, x }) => (
         <g key={label}>
           <line x1={E.ir.x + E.ir.w * x} y1={E.ir.y + 22} x2={E.ir.x + E.ir.w * x} y2={E.ir.y + E.ir.h} className="hw-row-line" />
@@ -339,28 +353,28 @@ function ExpandedDiagram({ activeBlocks: ab, activeWires: aw, isPanning, svgRef,
       ))}
 
       {/* ── Port labels ────────────────────────────────────────────────── */}
-      <PL x={E.im.x + 5}              y={E.im.y + 32}               text="Addr →"   />
-      <PL x={E.im.x + E.im.w - 5}     y={E.im.y + 32}  a="end"      text="Instr[31:0]" />
-      <PL x={E.dm.x + 5}              y={E.dm.y + 30}               text="Addr →"   />
-      <PL x={E.dm.x + 5}              y={E.dm.y + 56}               text="WData →"  />
-      <PL x={E.dm.x + E.dm.w - 5}     y={E.dm.y + 112} a="end"      text="← RData"  />
-      <PL x={E.regfile.x + 5}         y={E.regfile.y + 30}          text="A1(rs1)"  />
-      <PL x={E.regfile.x + 5}         y={E.regfile.y + 58}          text="A2(rs2)"  />
-      <PL x={E.regfile.x + 5}         y={E.regfile.y + 86}          text="A3(rd)"   />
-      <PL x={E.regfile.x + 5}         y={E.regfile.y + E.regfile.h - 14} text="WData" />
-      <PL x={E.regfile.x + E.regfile.w - 5} y={E.regfile.y + 30}   a="end" text="RD1 →" />
-      <PL x={E.regfile.x + E.regfile.w - 5} y={E.regfile.y + 72}   a="end" text="RD2 →" />
-      <PL x={E.mux.x + E.mux.w / 2}  y={E.mux.y - 8}  a="middle"   text="0"        />
-      <PL x={E.mux.x + E.mux.w / 2}  y={E.mux.y + E.mux.h + 12} a="middle" text="1" />
+      <PL x={E.im.x + 6}                   y={E.im.y + 32}                text="Addr →"      />
+      <PL x={E.im.x + E.im.w - 6}          y={E.im.y + 32}   a="end"      text="Instr[31:0]" />
+      <PL x={E.dm.x + 6}                   y={E.dm.y + 30}                text="Addr →"      />
+      <PL x={E.dm.x + 6}                   y={E.dm.y + 56}                text="WData →"     />
+      <PL x={E.dm.x + E.dm.w - 6}          y={E.dm.y + 112}  a="end"      text="← RData"     />
+      <PL x={E.regfile.x + 6}              y={E.regfile.y + 30}            text="A1(rs1)"     />
+      <PL x={E.regfile.x + 6}              y={E.regfile.y + 58}            text="A2(rs2)"     />
+      <PL x={E.regfile.x + 6}              y={E.regfile.y + 86}            text="A3(rd)"      />
+      <PL x={E.regfile.x + 6}              y={E.regfile.y + E.regfile.h - 14} text="WData"   />
+      <PL x={E.regfile.x + E.regfile.w - 6} y={E.regfile.y + 30}  a="end"  text="RD1 →"     />
+      <PL x={E.regfile.x + E.regfile.w - 6} y={E.regfile.y + 72}  a="end"  text="RD2 →"     />
+      <PL x={E.mux.x + E.mux.w / 2}       y={E.mux.y - 10}  a="middle"   text="0"           />
+      <PL x={E.mux.x + E.mux.w / 2}       y={E.mux.y + E.mux.h + 14} a="middle" text="1"   />
 
       {/* Legend */}
-      <g transform={`translate(${E.W - 218}, ${E.H - 72})`}>
-        <rect x={0} y={0} width={212} height={66} rx={7} className="hw-legend" />
+      <g transform={`translate(${E.W - 220}, ${E.H - 74})`}>
+        <rect x={0} y={0} width={214} height={68} rx={7} className="hw-legend" />
         <text x={10} y={14} className="hw-legend-title">Signal types</text>
         {[
-          { type: "data",    label: "Data / operand", y: 28 },
-          { type: "addr",    label: "Address",        y: 43 },
-          { type: "control", label: "Control signal", y: 58 },
+          { type: "data",    label: "Data / operand", y: 29 },
+          { type: "addr",    label: "Address",        y: 44 },
+          { type: "control", label: "Control signal", y: 59 },
         ].map(({ type, label, y }) => (
           <g key={type}>
             <line x1={10} y1={y - 4} x2={34} y2={y - 4} className={`hw-wire hw-wire--${type}`} markerEnd={`url(#hw-arrow${SF})`} />
@@ -412,6 +426,14 @@ export function DiagramPanel() {
     window.addEventListener("keydown", fn);
     return () => window.removeEventListener("keydown", fn);
   }, [archExpanded, setArchExpanded]);
+
+  const handleFit = useCallback(() => {
+    const c = containerRef.current;
+    if (!c) { setZoom(1); setPan({ x: 0, y: 0 }); return; }
+    const { width, height } = c.getBoundingClientRect();
+    setZoom(Math.min(width / E.W, height / E.H) * 0.95);
+    setPan({ x: 0, y: 0 });
+  }, []);
 
   const handleBgMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0) return;
@@ -472,45 +494,52 @@ export function DiagramPanel() {
       {archExpanded && (
         <div className="arch-expanded-overlay" onClick={() => { setArchExpanded(false); setZoom(1); setPan({ x: 0, y: 0 }); }}>
           <div className="arch-expanded-content hw-expanded-content" onClick={e => e.stopPropagation()}>
-            <div className="arch-expanded-header">
-              <div>
-                <h3 style={{ margin: 0 }}>RV32I — Single-Cycle Datapath</h3>
-                <p style={{ margin: "3px 0 0", fontSize: "0.75rem", color: "var(--app-fg-muted)" }}>
-                  Active stage highlighted · scroll to zoom · drag to pan
-                </p>
+
+            {/* SVG fills entire modal; floating controls sit on top */}
+            <div style={{ position: "relative", flex: 1, minHeight: 0, overflow: "hidden" }}>
+              <div ref={containerRef} className="arch-expanded-svg arch-zoom-pan-container">
+                <ExpandedDiagram
+                  activeBlocks={ab} activeWires={aw}
+                  isPanning={isPanning} svgRef={svgRef}
+                  viewBox={viewBox} onBgMouseDown={handleBgMouseDown} />
               </div>
-              <div className="arch-expanded-controls">
-                <div className="arch-zoom-controls">
-                  <button type="button" className="btn btn-small" onClick={() => setZoom(z => Math.max(MIN_ZOOM, z - ZOOM_STEP))}>−</button>
-                  <span className="arch-zoom-value">{Math.round(zoom * 100)}%</span>
-                  <button type="button" className="btn btn-small" onClick={() => setZoom(z => Math.min(MAX_ZOOM, z + ZOOM_STEP))}>+</button>
-                </div>
-                <button type="button" className="btn btn-small" onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}>↺ Reset</button>
-                <button type="button" className="btn" onClick={() => { setArchExpanded(false); setZoom(1); setPan({ x: 0, y: 0 }); }}>✕ Close</button>
+
+              {/* Floating control bar — always visible over the diagram */}
+              <div className="hw-float-controls">
+                {/* Title */}
+                <span className="hw-float-title">RV32I — Single-Cycle Datapath</span>
+
+                {/* Active event pills */}
+                {traceEvents.length > 0 && (
+                  <span className="hw-float-pills">
+                    {traceEvents.map((ev, i) => {
+                      const stage: StageName = (BLOCK_STAGE[(EV_BLOCKS[ev] ?? [])[0]] ?? "IF") as StageName;
+                      const pal = STAGE_PALETTE[stage];
+                      return (
+                        <span key={i} className="hw-float-pill"
+                          style={{ background: pal.bg, color: pal.color, border: `1px solid ${pal.color}55` }}>{ev}</span>
+                      );
+                    })}
+                  </span>
+                )}
+
+                <span className="hw-float-sep" />
+
+                {/* Zoom controls */}
+                <button type="button" className="hw-float-btn" title="Zoom out" onClick={() => setZoom(z => Math.max(MIN_ZOOM, z - ZOOM_STEP))}>−</button>
+                <span className="hw-float-zoom">{Math.round(zoom * 100)}%</span>
+                <button type="button" className="hw-float-btn" title="Zoom in"  onClick={() => setZoom(z => Math.min(MAX_ZOOM, z + ZOOM_STEP))}>+</button>
+                <button type="button" className="hw-float-btn" title="Fit to screen" onClick={handleFit}>⊡ Fit</button>
+                <button type="button" className="hw-float-btn" title="Reset zoom & pan" onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}>↺</button>
+
+                {/* Close */}
+                <button type="button" className="hw-float-close" title="Close (Esc)"
+                  onClick={() => { setArchExpanded(false); setZoom(1); setPan({ x: 0, y: 0 }); }}>
+                  ✕ Close
+                </button>
               </div>
             </div>
 
-            {/* Active event pills */}
-            {traceEvents.length > 0 && (
-              <div style={{ display: "flex", gap: 6, padding: "6px 18px", flexShrink: 0, background: "var(--app-surface-elevated)", borderBottom: "1px solid var(--app-border-subtle)", alignItems: "center" }}>
-                <span style={{ fontSize: "0.7rem", color: "var(--app-fg-dim)" }}>Active:</span>
-                {traceEvents.map((ev, i) => {
-                  const stage: StageName = (BLOCK_STAGE[(EV_BLOCKS[ev] ?? [])[0]] ?? "IF") as StageName;
-                  const pal = STAGE_PALETTE[stage];
-                  return (
-                    <span key={i} style={{ fontSize: "0.72rem", fontWeight: 700, padding: "2px 9px", borderRadius: 999, background: pal.bg, color: pal.color, border: `1px solid ${pal.color}44` }}>{ev}</span>
-                  );
-                })}
-              </div>
-            )}
-
-            <div ref={containerRef} className="arch-expanded-svg arch-zoom-pan-container">
-              <ExpandedDiagram
-                activeBlocks={ab} activeWires={aw}
-                isPanning={isPanning} svgRef={svgRef}
-                viewBox={viewBox} onBgMouseDown={handleBgMouseDown} />
-            </div>
-            <div className="arch-expanded-hint">Scroll to zoom · Drag background to pan</div>
           </div>
         </div>
       )}
