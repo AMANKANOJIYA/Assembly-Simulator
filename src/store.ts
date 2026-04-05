@@ -62,6 +62,8 @@ export interface AppState {
   errors: AssemblerError[];
   toast: { message: string; type: "error" | "info" } | null;
   runIntervalId: number | null;
+  /** Guard to prevent concurrent run() calls */
+  isRunStarting: boolean;
   panelVisibility: PanelVisibility;
   archExpanded: boolean;
   blockPositions: Record<string, { x: number; y: number }>;
@@ -158,6 +160,7 @@ export const useStore = create<AppState & AppActions>((set, get) => ({
   errors: [],
   toast: null,
   runIntervalId: null,
+  isRunStarting: false,
   panelVisibility: {
     code: true,
     arch: true,
@@ -230,10 +233,16 @@ export const useStore = create<AppState & AppActions>((set, get) => ({
       return true;
     } catch (e) {
       const err = String(e);
+      // Backend may serialize errors as JSON in the error string
       try {
         const parsed = JSON.parse(err) as AssemblerError[];
-        set({ errors: parsed });
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          set({ errors: parsed });
+        } else {
+          set({ errors: [] });
+        }
       } catch {
+        // Not JSON — a plain error string, surface as toast (already done below)
         set({ errors: [] });
       }
       get().setToast({ message: err, type: "error" });
@@ -243,11 +252,14 @@ export const useStore = create<AppState & AppActions>((set, get) => ({
 
   run: async () => {
     const st = get();
-    const { snapshot, arch } = st;
-    const source = getActiveSource(st);
-    if (snapshot?.halted) return;
+    // Prevent concurrent run() invocations
+    if (st.isRunStarting || st.runIntervalId != null) return;
+    if (st.snapshot?.halted) return;
 
-    // Ensure program is loaded before run (in case user skipped Assemble)
+    set({ isRunStarting: true });
+    const { arch } = st;
+    const source = getActiveSource(st);
+
     try {
       const check = await invoke<{ ok: boolean }>("assemble_check", { source, arch });
       if (!check.ok) {
@@ -262,6 +274,8 @@ export const useStore = create<AppState & AppActions>((set, get) => ({
     } catch (e) {
       get().setToast({ message: String(e), type: "error" });
       return;
+    } finally {
+      set({ isRunStarting: false });
     }
 
     await invoke("set_running", { running: true });
@@ -308,14 +322,14 @@ export const useStore = create<AppState & AppActions>((set, get) => ({
     set({ runIntervalId: id });
   },
 
-  pause: () => {
+  pause: async () => {
     const { runIntervalId } = get();
     if (runIntervalId != null) {
       clearTimeout(runIntervalId);
       set({ runIntervalId: null });
     }
-    invoke("set_running", { running: false });
-    get().refreshState();
+    await invoke("set_running", { running: false });
+    await get().refreshState();
   },
 
   stepForward: async () => {
@@ -486,12 +500,13 @@ export const useStore = create<AppState & AppActions>((set, get) => ({
   setBreakpoints: (b) => set({ breakpoints: b }),
   toggleBreakpoint: (addr) =>
     set((s) => {
-      const idx = s.breakpoints.indexOf(addr);
-      const next =
-        idx >= 0
-          ? [...s.breakpoints.slice(0, idx), ...s.breakpoints.slice(idx + 1)]
-          : [...s.breakpoints, addr].sort((a, b) => a - b);
-      return { breakpoints: next };
+      const bpSet = new Set(s.breakpoints);
+      if (bpSet.has(addr)) {
+        bpSet.delete(addr);
+      } else {
+        bpSet.add(addr);
+      }
+      return { breakpoints: [...bpSet].sort((a, b) => a - b) };
     }),
   setMaxCycleLimit: (n) => set({ maxCycleLimit: n }),
   saveFile: async () => {

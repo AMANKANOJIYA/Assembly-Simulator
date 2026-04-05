@@ -110,9 +110,6 @@ function App() {
   const setOnboardingOpen = useStore((s) => s.setOnboardingOpen);
   const loadSchemas = useStore((s) => s.loadSchemas);
   const refreshState = useStore((s) => s.refreshState);
-  const saveFile = useStore((s) => s.saveFile);
-  const loadFile = useStore((s) => s.loadFile);
-  const newFile = useStore((s) => s.newFile);
 
   const themeMode = useStore((s) => s.themeMode);
   useEffect(() => {
@@ -129,27 +126,33 @@ function App() {
     }
   }, [setSource, loadSchemas, refreshState, setOnboardingOpen]);
 
+  // Session auto-save: debounce on page visibility to avoid unnecessary writes
   useEffect(() => {
-    const interval = setInterval(saveSession, 5000);
+    const interval = setInterval(() => {
+      if (!document.hidden) saveSession();
+    }, 5000);
     return () => clearInterval(interval);
   }, []);
 
+  // Stable keyboard handler — reads store actions via getState() so the effect
+  // never needs to re-run when those functions change reference.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      if (e.key === "s") {
         e.preventDefault();
-        saveFile();
-      } else if ((e.metaKey || e.ctrlKey) && e.key === "o") {
+        useStore.getState().saveFile();
+      } else if (e.key === "o") {
         e.preventDefault();
-        loadFile();
-      } else if ((e.metaKey || e.ctrlKey) && e.key === "n") {
+        useStore.getState().loadFile();
+      } else if (e.key === "n") {
         e.preventDefault();
-        newFile();
+        useStore.getState().newFile();
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [saveFile, loadFile, newFile]);
+  }, []); // empty deps — always reads latest via getState()
 
   return (
     <ErrorBoundary>

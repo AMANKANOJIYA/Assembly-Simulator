@@ -40,8 +40,8 @@ function scrollTargetIntoView(target?: string) {
 }
 
 export function OnboardingTour() {
-  const onboardingOpen = useStore((s) => (s as any).onboardingOpen as boolean);
-  const setOnboardingOpen = useStore((s) => (s as any).setOnboardingOpen as (v: boolean) => void);
+  const onboardingOpen = useStore((s) => s.onboardingOpen);
+  const setOnboardingOpen = useStore((s) => s.setOnboardingOpen);
   const setHelpOpen = useStore((s) => s.setHelpOpen);
   const setSettingsOpen = useStore((s) => s.setSettingsOpen);
   const arch = useStore((s) => s.arch);

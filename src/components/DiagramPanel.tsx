@@ -41,7 +41,7 @@ const BLOCK_INNERS: Record<string, string[]> = {
   control: ["CLK", "Opcode", "PC_en", "Reg_wr", "Mem_rd/wr"],
 };
 
-/** Straight orthogonal segments + per-edge lane (compact + expanded use the same routing) */
+/** Straight orthogonal segments + per-edge lane */
 function diagramEdgePath(
   x1: number,
   y1: number,
@@ -90,6 +90,12 @@ function DiagramContent({
 }) {
   const dragRef = useRef<{ id: string; startX: number; startY: number } | null>(null);
 
+  // Keep latest callbacks in refs so stable drag handlers always call the current version
+  const onBlockDragRef = useRef(onBlockDrag);
+  const onBlockDragEndRef = useRef(onBlockDragEnd);
+  useEffect(() => { onBlockDragRef.current = onBlockDrag; }, [onBlockDrag]);
+  useEffect(() => { onBlockDragEndRef.current = onBlockDragEnd; }, [onBlockDragEnd]);
+
   const blocksLaidOut = useMemo(
     () => blocks.map((b) => effectiveBlock(b, expanded)),
     [blocks, expanded]
@@ -106,47 +112,54 @@ function DiagramContent({
     return override ? { x: override.x, y: override.y } : { x: b.x, y: b.y };
   };
 
-  const pixelToViewBox = useCallback(
-    (dx: number, dy: number) => {
-      const svg = svgRef?.current;
-      if (!svg) return { dx, dy };
-      const rect = svg.getBoundingClientRect();
-      const parts = viewBox.split(/\s+/).map(Number);
-      const vbW = parts[2] || canvasWidth;
-      const vbH = parts[3] || canvasHeight;
-      const scaleX = vbW / rect.width;
-      const scaleY = vbH / rect.height;
-      return { dx: dx * scaleX, dy: dy * scaleY };
-    },
-    [svgRef, viewBox, canvasWidth, canvasHeight]
-  );
+  // Keep the SVG ref and viewBox in a ref so the stable drag move handler can read them
+  const svgRefInternal = useRef(svgRef);
+  const viewBoxRef = useRef(viewBox);
+  const canvasWRef = useRef(canvasWidth);
+  const canvasHRef = useRef(canvasHeight);
+  useEffect(() => { svgRefInternal.current = svgRef; }, [svgRef]);
+  useEffect(() => { viewBoxRef.current = viewBox; }, [viewBox]);
+  useEffect(() => { canvasWRef.current = canvasWidth; }, [canvasWidth]);
+  useEffect(() => { canvasHRef.current = canvasHeight; }, [canvasHeight]);
 
-  const handleMouseMove = useCallback(
-    (e: MouseEvent) => {
-      if (!dragRef.current) return;
-      const dx = e.clientX - dragRef.current.startX;
-      const dy = e.clientY - dragRef.current.startY;
-      const { dx: vdx, dy: vdy } = pixelToViewBox(dx, dy);
-      onBlockDrag(dragRef.current.id, vdx, vdy);
-      dragRef.current = { ...dragRef.current, startX: e.clientX, startY: e.clientY };
-    },
-    [onBlockDrag, pixelToViewBox]
-  );
-
-  const handleMouseUp = useCallback(() => {
-    dragRef.current = null;
-    onBlockDragEnd();
-    document.removeEventListener("mousemove", handleMouseMove);
-    document.removeEventListener("mouseup", handleMouseUp);
-  }, [onBlockDragEnd, handleMouseMove]);
-
-  const handleBlockMouseDown = (e: React.MouseEvent, id: string) => {
+  // Stable handler: created once, reads latest values via refs
+  const handleBlockMouseDown = useCallback((e: React.MouseEvent, id: string) => {
     e.preventDefault();
     e.stopPropagation();
     dragRef.current = { id, startX: e.clientX, startY: e.clientY };
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-  };
+
+    const move = (ev: MouseEvent) => {
+      if (!dragRef.current) return;
+      const dx = ev.clientX - dragRef.current.startX;
+      const dy = ev.clientY - dragRef.current.startY;
+
+      // Pixel → viewBox coordinate conversion using current SVG rect
+      const svg = svgRefInternal.current?.current;
+      let vdx = dx;
+      let vdy = dy;
+      if (svg) {
+        const rect = svg.getBoundingClientRect();
+        const parts = viewBoxRef.current.split(/\s+/).map(Number);
+        const vbW = parts[2] || canvasWRef.current;
+        const vbH = parts[3] || canvasHRef.current;
+        vdx = dx * (vbW / rect.width);
+        vdy = dy * (vbH / rect.height);
+      }
+
+      onBlockDragRef.current(dragRef.current.id, vdx, vdy);
+      dragRef.current = { ...dragRef.current, startX: ev.clientX, startY: ev.clientY };
+    };
+
+    const up = () => {
+      dragRef.current = null;
+      onBlockDragEndRef.current();
+      document.removeEventListener("mousemove", move);
+      document.removeEventListener("mouseup", up);
+    };
+
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
+  }, []); // stable — no deps needed, all values read via refs
 
   return (
     <svg
@@ -266,6 +279,13 @@ export function DiagramPanel() {
   const panRef = useRef<{ startX: number; startY: number; startPanX: number; startPanY: number } | null>(null);
   const zoomPanContainerRef = useRef<HTMLDivElement | null>(null);
 
+  // Keep zoom/pan in refs so stable pan handlers read current values
+  const zoomRef = useRef(zoom);
+  const panXRef = useRef(pan.x);
+  const panYRef = useRef(pan.y);
+  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+  useEffect(() => { panXRef.current = pan.x; panYRef.current = pan.y; }, [pan]);
+
   useEffect(() => {
     const el = zoomPanContainerRef.current;
     if (!el || !archExpanded) return;
@@ -278,10 +298,15 @@ export function DiagramPanel() {
     return () => el.removeEventListener("wheel", onWheel);
   }, [archExpanded]);
 
-  /** Expanded modal uses a larger logical canvas so nodes don’t overlap */
   const viewBoxW = EXPANDED_VB.w / zoom;
   const viewBoxH = EXPANDED_VB.h / zoom;
   const viewBox = `${pan.x} ${pan.y} ${viewBoxW} ${viewBoxH}`;
+
+  // Keep viewBox dims in refs for stable pan move handler
+  const viewBoxWRef = useRef(viewBoxW);
+  const viewBoxHRef = useRef(viewBoxH);
+  useEffect(() => { viewBoxWRef.current = viewBoxW; }, [viewBoxW]);
+  useEffect(() => { viewBoxHRef.current = viewBoxH; }, [viewBoxH]);
 
   useEffect(() => {
     if (archExpanded) resetBlockPositions();
@@ -294,32 +319,39 @@ export function DiagramPanel() {
     setPan({ x: 0, y: 0 });
   };
 
+  // Stable pan handler: created once, reads all values via refs
   const handleBackgroundMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
     setIsPanning(true);
-    panRef.current = { startX: e.clientX, startY: e.clientY, startPanX: pan.x, startPanY: pan.y };
-    document.addEventListener("mousemove", handlePanMove);
-    document.addEventListener("mouseup", handlePanUp);
-  }, [pan.x, pan.y]);
+    panRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startPanX: panXRef.current,
+      startPanY: panYRef.current,
+    };
 
-  const handlePanMove = useCallback((e: MouseEvent) => {
-    if (!panRef.current) return;
-    const svg = expandedSvgRef.current;
-    if (!svg) return;
-    const rect = svg.getBoundingClientRect();
-    const dx = (e.clientX - panRef.current.startX) * (viewBoxW / rect.width);
-    const dy = (e.clientY - panRef.current.startY) * (viewBoxH / rect.height);
-    setPan({ x: panRef.current.startPanX - dx, y: panRef.current.startPanY - dy });
-  }, [viewBoxW, viewBoxH]);
+    const move = (ev: MouseEvent) => {
+      if (!panRef.current) return;
+      const svg = expandedSvgRef.current;
+      if (!svg) return;
+      const rect = svg.getBoundingClientRect();
+      const dx = (ev.clientX - panRef.current.startX) * (viewBoxWRef.current / rect.width);
+      const dy = (ev.clientY - panRef.current.startY) * (viewBoxHRef.current / rect.height);
+      setPan({ x: panRef.current.startPanX - dx, y: panRef.current.startPanY - dy });
+    };
 
-  const handlePanUp = useCallback(() => {
-    setIsPanning(false);
-    panRef.current = null;
-    document.removeEventListener("mousemove", handlePanMove);
-    document.removeEventListener("mouseup", handlePanUp);
-  }, [handlePanMove]);
+    const up = () => {
+      setIsPanning(false);
+      panRef.current = null;
+      document.removeEventListener("mousemove", move);
+      document.removeEventListener("mouseup", up);
+    };
+
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
+  }, []); // stable — reads all mutable values via refs
 
   const activeBlocks = new Set<string>();
   const activeConnections = new Set<string>();
@@ -342,7 +374,7 @@ export function DiagramPanel() {
     [uiSchema, archExpanded, setBlockPosition]
   );
 
-  const handleBlockDragEnd = () => {};
+  const handleBlockDragEnd = useCallback(() => {}, []);
 
   if (!uiSchema) {
     return (

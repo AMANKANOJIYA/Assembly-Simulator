@@ -23,15 +23,15 @@ pub fn assemble(source: String, arch: String) -> Result<AssembleResponse, String
 }
 
 #[tauri::command]
-pub fn assemble_check(source: String, arch: String) -> AssembleCheckResponse {
-    let mut sim = SIM.lock().unwrap();
+pub fn assemble_check(source: String, arch: String) -> Result<AssembleCheckResponse, String> {
+    let mut sim = SIM.lock().map_err(|e| e.to_string())?;
     sim.arch = arch;
     let image = sim.get_plugin().assemble(&source);
     let ok = image.errors.is_empty();
-    AssembleCheckResponse {
+    Ok(AssembleCheckResponse {
         errors: image.errors,
         ok,
-    }
+    })
 }
 
 #[tauri::command]
@@ -84,13 +84,14 @@ pub fn run_tick() -> Result<Option<StepResult>, String> {
 }
 
 #[tauri::command]
-pub fn set_running(running: bool) {
-    let mut sim = SIM.lock().unwrap();
+pub fn set_running(running: bool) -> Result<(), String> {
+    let mut sim = SIM.lock().map_err(|e| e.to_string())?;
     sim.set_run_state(if running {
         RunState::Running
     } else {
         RunState::Paused
     });
+    Ok(())
 }
 
 #[tauri::command]
@@ -145,9 +146,10 @@ pub fn set_memory_size(size: usize) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn set_breakpoints(addrs: Vec<u32>) {
-    let mut sim = SIM.lock().unwrap();
+pub fn set_breakpoints(addrs: Vec<u32>) -> Result<(), String> {
+    let mut sim = SIM.lock().map_err(|e| e.to_string())?;
     sim.set_breakpoints(addrs);
+    Ok(())
 }
 
 #[tauri::command]
@@ -165,17 +167,17 @@ pub fn load_program(source: String, arch: String, memory_size: Option<usize>) ->
 }
 
 #[tauri::command]
-pub fn get_ui_schema(arch: String) -> UiSchema {
-    let mut sim = SIM.lock().unwrap();
+pub fn get_ui_schema(arch: String) -> Result<UiSchema, String> {
+    let mut sim = SIM.lock().map_err(|e| e.to_string())?;
     sim.arch = arch;
-    sim.get_plugin().ui_schema()
+    Ok(sim.get_plugin().ui_schema())
 }
 
 #[tauri::command]
-pub fn get_register_schema(arch: String) -> RegisterSchema {
-    let mut sim = SIM.lock().unwrap();
+pub fn get_register_schema(arch: String) -> Result<RegisterSchema, String> {
+    let mut sim = SIM.lock().map_err(|e| e.to_string())?;
     sim.arch = arch;
-    sim.get_plugin().register_schema()
+    Ok(sim.get_plugin().register_schema())
 }
 
 /// Write ASIM file to path (path comes from frontend dialog - non-blocking)

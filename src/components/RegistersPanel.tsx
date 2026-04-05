@@ -17,11 +17,9 @@ function RegRow({
   isPc?: boolean;
 }) {
   return (
-    <div
-      className={`reg-row${nonzero ? " nonzero" : ""}${isPc ? " pc-row" : ""}`}
-    >
+    <div className={`reg-row${nonzero ? " nonzero" : ""}${isPc ? " pc-row" : ""}`}>
       <span className="reg-name">{name}</span>
-      <span className={`reg-value${nonzero ? " nonzero" : ""}`}>{value}</span>
+      <span className="reg-value">{value}</span>
     </div>
   );
 }

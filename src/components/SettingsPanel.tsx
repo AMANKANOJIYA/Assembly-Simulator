@@ -182,7 +182,7 @@ export function SettingsPanel() {
                           max={10000000}
                           step={1000}
                           value={maxCycleLimit}
-                          onChange={(e) => setMaxCycleLimit(Math.max(100, parseInt(e.target.value, 10) || 100))}
+                          onChange={(e) => setMaxCycleLimit(Math.min(10_000_000, Math.max(100, parseInt(e.target.value, 10) || 100)))}
                         />
                       </label>
                     )}
