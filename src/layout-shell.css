@@ -2660,9 +2660,7 @@ html[data-ui-density="compact"] .vscode-settings-main {
 }
 
 /* Expanded modal — bigger canvas */
-.hw-expanded-content {
-  height: min(88vh, 900px) !important;
-}
+/* hw-expanded-content: full-screen via arch-expanded-content in App.css */
 
 /* Light-theme overrides */
 [data-theme="light"] .hw-rect {

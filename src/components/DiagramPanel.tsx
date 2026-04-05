@@ -387,6 +387,7 @@ export function DiagramPanel() {
   const [zoom, setZoom] = useState(1);
   const [pan,  setPan]  = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
+  const [tall, setTall] = useState(false);
   const svgRef       = useRef<SVGSVGElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const zoomRef = useRef(zoom);
@@ -452,17 +453,20 @@ export function DiagramPanel() {
                 {lastEvent}
               </span>
             )}
-            <button type="button" className="btn btn-small" onClick={() => setArchExpanded(true)}>⊞ Expand</button>
+            <button type="button" className="btn btn-small" title={tall ? "Collapse" : "Expand panel"} onClick={() => setTall(t => !t)}>
+              {tall ? "▲" : "▼"}
+            </button>
+            <button type="button" className="btn btn-small" onClick={() => setArchExpanded(true)} title="Full screen">⊞</button>
           </div>
         </div>
-        <div className="diagram-container">
+        <div className={`diagram-container ${tall ? "diagram-container--tall" : "diagram-container--short"}`}>
           {isRV32I
             ? <CompactDiagram activeBlocks={ab} activeWires={aw} />
             : <div className="diagram-placeholder" style={{ padding: "18px 12px", textAlign: "center", color: "var(--app-fg-muted)", fontSize: "0.8rem" }}>
-                Click <strong>Expand</strong> to view the {arch} architecture diagram
+                Click <strong>⊞</strong> to view the {arch} architecture diagram
               </div>}
         </div>
-        <div className="diagram-hint">Expand for full circuit diagram with signal flow</div>
+        <div className="diagram-hint">▼/▲ resize · ⊞ full screen circuit diagram</div>
       </div>
 
       {archExpanded && (
